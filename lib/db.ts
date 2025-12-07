@@ -39,9 +39,13 @@ export interface User {
   email: string | null;
   paymentMethodId: string | null;
   paymentMethodConnected: boolean;
-  billingStatus: "active" | "unpaid_lockout";
+  billingStatus: "active" | "grace_period" | "unpaid_lockout";
   billingCycleStart: Timestamp | null;
   nextBillingDate: Timestamp | null;
+  // Grace period tracking
+  paymentFailedAt: Timestamp | null;
+  gracePeriodEndsAt: Timestamp | null;
+  lastFailedInvoiceId: string | null;
   totalRevenueGeneratedCents: number;
   flowConfig: FlowConfig;
   offerPageSettings: OfferPageSettings;
@@ -168,6 +172,9 @@ export async function createUser(data: {
     billingStatus: "active" as const,
     billingCycleStart: null,
     nextBillingDate: null,
+    paymentFailedAt: null,
+    gracePeriodEndsAt: null,
+    lastFailedInvoiceId: null,
     totalRevenueGeneratedCents: 0,
     flowConfig: DEFAULT_FLOW_CONFIG,
     offerPageSettings: DEFAULT_OFFER_PAGE_SETTINGS,
@@ -218,12 +225,106 @@ export async function removeUserPaymentMethod(userId: string): Promise<void> {
 
 export async function updateBillingStatus(
   userId: string,
-  status: "active" | "unpaid_lockout"
+  status: "active" | "grace_period" | "unpaid_lockout"
 ): Promise<void> {
-  await db.collection("users").doc(userId).update({
+  const updateData: Record<string, unknown> = {
     billingStatus: status,
     updatedAt: Timestamp.now(),
+  };
+
+  // Clear grace period fields when restored to active
+  if (status === "active") {
+    updateData.paymentFailedAt = null;
+    updateData.gracePeriodEndsAt = null;
+    updateData.lastFailedInvoiceId = null;
+  }
+
+  await db.collection("users").doc(userId).update(updateData);
+}
+
+// Grace period is 24 hours
+const GRACE_PERIOD_HOURS = 24;
+
+export async function startGracePeriod(
+  userId: string,
+  failedInvoiceId: string
+): Promise<void> {
+  const now = Timestamp.now();
+  const gracePeriodEnds = Timestamp.fromDate(
+    new Date(Date.now() + GRACE_PERIOD_HOURS * 60 * 60 * 1000)
+  );
+
+  await db.collection("users").doc(userId).update({
+    billingStatus: "grace_period",
+    paymentFailedAt: now,
+    gracePeriodEndsAt: gracePeriodEnds,
+    lastFailedInvoiceId: failedInvoiceId,
+    updatedAt: now,
   });
+}
+
+export async function checkAndEnforceLockout(userId: string): Promise<boolean> {
+  const user = await getUser(userId);
+  if (!user) return false;
+
+  // If already locked out, return true
+  if (user.billingStatus === "unpaid_lockout") {
+    return true;
+  }
+
+  // If in grace period, check if it's expired
+  if (user.billingStatus === "grace_period" && user.gracePeriodEndsAt) {
+    const now = new Date();
+    const gracePeriodEnd = user.gracePeriodEndsAt.toDate();
+
+    if (now > gracePeriodEnd) {
+      // Grace period expired - enforce lockout
+      await updateBillingStatus(userId, "unpaid_lockout");
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if user can run upsell flows
+ * Returns false if:
+ * - billingStatus is unpaid_lockout
+ * - flowConfig.isActive is false
+ * - Grace period has expired (will also trigger lockout)
+ */
+export async function canRunUpsellFlow(userId: string): Promise<{
+  allowed: boolean;
+  reason?: string;
+}> {
+  const user = await getUser(userId);
+  if (!user) {
+    return { allowed: false, reason: "User not found" };
+  }
+
+  // Check if locked out (also enforces lockout if grace period expired)
+  const isLockedOut = await checkAndEnforceLockout(userId);
+  if (isLockedOut) {
+    return { allowed: false, reason: "Account locked due to unpaid billing" };
+  }
+
+  // Check if flow is enabled
+  if (!user.flowConfig.isActive) {
+    return { allowed: false, reason: "Upsell flow is disabled" };
+  }
+
+  // Check if flow is properly configured
+  if (!user.flowConfig.triggerProductId || !user.flowConfig.upsellProductId) {
+    return { allowed: false, reason: "Upsell flow not configured" };
+  }
+
+  // Check if payment method is connected (required to go live)
+  if (!user.paymentMethodConnected) {
+    return { allowed: false, reason: "Payment method not connected" };
+  }
+
+  return { allowed: true };
 }
 
 export async function updateFlowConfig(

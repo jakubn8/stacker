@@ -7,7 +7,7 @@ import {
   updateInvoiceStatus,
   incrementInvoiceRetryCount,
   updateUserNextBillingDate,
-  updateBillingStatus,
+  startGracePeriod,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
 
@@ -178,9 +178,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           });
           await incrementInvoiceRetryCount(invoice.id);
 
-          // Set user to lockout status - they can't use the app until they fix payment
-          await updateBillingStatus(user.id, "unpaid_lockout");
-          console.log(`User ${user.id} set to unpaid_lockout status`);
+          // Start grace period (24 hours to fix payment before lockout)
+          await startGracePeriod(user.id, invoice.id);
+          console.log(`User ${user.id} entered grace period (24h to fix payment)`);
 
           results.failed++;
           results.details.push({
