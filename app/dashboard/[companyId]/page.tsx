@@ -35,8 +35,8 @@ export default function DashboardHome() {
       bgColor: "bg-green-500/10",
     },
     {
-      title: "Offer Preview",
-      description: "See how your upsells look to customers",
+      title: "Store Preview",
+      description: "See how your products look to users",
       href: `/dashboard/${companyId}/preview`,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,35 +104,43 @@ export default function DashboardHome() {
           </p>
         </div>
 
-        {/* How It Works - Frosted Glass Section */}
+        {/* How It Works Section */}
         <div className="relative mb-10">
           <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-purple-500/10 to-orange-500/10 rounded-2xl blur-xl"></div>
-          <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-            <h2 className="text-center text-zinc-400 text-sm font-medium uppercase tracking-wider mb-6">
+          <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
+            <h2 className="text-center text-zinc-400 text-sm font-medium uppercase tracking-wider mb-8">
               How it works
             </h2>
 
-            <div className="flex items-center justify-center gap-4">
+            <div className="grid grid-cols-3 gap-6">
               {steps.map((step, index) => (
-                <div key={step.number} className="flex items-center">
-                  {/* Step Card */}
-                  <div className="flex flex-col items-center text-center w-[140px]">
-                    <div className="h-11 w-11 rounded-xl bg-zinc-800/80 border border-zinc-700 flex items-center justify-center mb-2">
-                      <span className="text-green-400 [&>svg]:w-5 [&>svg]:h-5">{step.icon}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold">
-                        {step.number}
-                      </span>
-                      <h3 className="text-white font-medium text-xs">{step.title}</h3>
-                    </div>
-                    <p className="text-zinc-500 text-[10px] leading-tight">{step.description}</p>
+                <div key={step.number} className="relative flex flex-col items-center text-center">
+                  {/* Step number badge */}
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold shadow-lg shadow-green-500/30">
+                      {step.number}
+                    </span>
                   </div>
+
+                  {/* Icon */}
+                  <div className="h-16 w-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4 mt-2">
+                    <span className="text-green-400">{step.icon}</span>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-white font-semibold text-base mb-2 leading-tight">
+                    {step.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-zinc-500 text-sm leading-relaxed">
+                    {step.description}
+                  </p>
 
                   {/* Arrow connector */}
                   {index < steps.length - 1 && (
-                    <div className="mx-3">
-                      <svg className="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 hidden md:block">
+                      <svg className="w-6 h-6 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
