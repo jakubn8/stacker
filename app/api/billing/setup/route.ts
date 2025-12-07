@@ -47,8 +47,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Get the base URL for redirect
+    // Redirect to a standalone success page since we'll be outside the Whop iframe
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const redirectUrl = `${baseUrl}/dashboard/${whopCompanyId}?billing=success`;
+    const redirectUrl = `${baseUrl}/billing/success?companyId=${whopCompanyId}`;
 
     // Create checkout configuration in "setup" mode
     const checkoutConfig = await whopsdk.checkoutConfigurations.create({
