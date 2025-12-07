@@ -203,7 +203,11 @@ async function handlePaymentFailed(data: Record<string, unknown>): Promise<void>
  * Handle successful setup intent (payment method vaulted)
  */
 async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promise<void> {
-  const paymentMethodId = data.payment_method_id as string;
+  // Log full data structure to debug
+  console.log("Setup intent data:", JSON.stringify(data, null, 2));
+
+  // Try multiple possible field names for payment method ID
+  const paymentMethodId = (data.payment_method_id || data.payment_method || data.paymentMethodId) as string | undefined;
   const metadata = data.metadata as Record<string, string> | undefined;
   const userId = metadata?.stacker_user_id;
 
@@ -211,6 +215,11 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
 
   if (!userId) {
     console.log("No user ID in setup intent metadata");
+    return;
+  }
+
+  if (!paymentMethodId) {
+    console.log("No payment method ID in setup intent data");
     return;
   }
 
