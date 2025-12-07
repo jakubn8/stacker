@@ -206,12 +206,13 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
   // Log full data structure to debug
   console.log("Setup intent data:", JSON.stringify(data, null, 2));
 
-  // Try multiple possible field names for payment method ID
-  const paymentMethodId = (data.payment_method_id || data.payment_method || data.paymentMethodId) as string | undefined;
+  // Extract payment method - it's an object with .id inside
+  const paymentMethodObj = data.payment_method as { id?: string; card?: { brand?: string; last4?: string } } | undefined;
+  const paymentMethodId = paymentMethodObj?.id;
   const metadata = data.metadata as Record<string, string> | undefined;
   const userId = metadata?.stacker_user_id;
 
-  console.log("Setup intent succeeded:", { paymentMethodId, userId });
+  console.log("Setup intent succeeded:", { paymentMethodId, userId, card: paymentMethodObj?.card });
 
   if (!userId) {
     console.log("No user ID in setup intent metadata");

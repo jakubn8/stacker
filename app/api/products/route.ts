@@ -88,8 +88,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             company_id: companyId,
             product_ids: [product.id],
           })) {
-            // Use the first visible plan's pricing
-            price = plan.initial_price / 100; // Convert from cents
+            // Use the first visible plan's pricing (already in dollars)
+            price = plan.initial_price;
             currency = plan.currency || "usd";
             const pType = plan.plan_type as string;
             planType = pType === "renewal" ? "renewal" :

@@ -320,6 +320,11 @@ export default function DashboardPage() {
 
   // Handlers that save to database
   const handleSetIsActive = (active: boolean) => {
+    // Can't activate without a payment method
+    if (active && !billingStatus?.user?.paymentMethodConnected) {
+      alert("Please connect a payment method before activating upsells.");
+      return;
+    }
     setIsActive(active);
     saveFlowConfig({ isActive: active });
   };
