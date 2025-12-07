@@ -1,11 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Button,
   Select,
 } from "@whop/frosted-ui";
+
+// Billing types
+interface BillingStatus {
+  user: {
+    id: string;
+    paymentMethodConnected: boolean;
+    email: string | null;
+  } | null;
+  billing: {
+    pendingFee: number;
+    pendingTransactionCount: number;
+    nextBillingDate: string | null;
+    daysTillBilling: number;
+  };
+  recentTransactions: Array<{
+    id: string;
+    productName: string;
+    saleAmount: number;
+    feeAmount: number;
+    createdAt: string;
+  }>;
+  recentInvoices: Array<{
+    id: string;
+    periodStart: string;
+    periodEnd: string;
+    totalFee: number;
+    status: string;
+  }>;
+}
 
 // Mock data
 const mockProducts = [
@@ -77,6 +107,10 @@ const mockFlowConfig = {
 };
 
 export default function DashboardPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const companyId = params.companyId as string;
+
   const [isActive, setIsActive] = useState(true);
   const [triggerProduct, setTriggerProduct] = useState("");
   const [upsellProduct, setUpsellProduct] = useState("");
@@ -88,6 +122,79 @@ export default function DashboardPage() {
   const [editedDescription, setEditedDescription] = useState("");
   const [showDiscount, setShowDiscount] = useState(false);
   const [originalPrice, setOriginalPrice] = useState("");
+
+  // Billing state
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [connectingPayment, setConnectingPayment] = useState(false);
+  const [billingSuccess, setBillingSuccess] = useState(false);
+
+  // Check for billing success from redirect
+  useEffect(() => {
+    if (searchParams.get("billing") === "success") {
+      setBillingSuccess(true);
+      // Clear the URL param
+      window.history.replaceState({}, "", `/dashboard/${companyId}`);
+      // Refresh billing status
+      fetchBillingStatus();
+    }
+  }, [searchParams, companyId]);
+
+  // Fetch billing status
+  const fetchBillingStatus = useCallback(async () => {
+    try {
+      setBillingLoading(true);
+      // For demo, we'll use a mock whopUserId - in production this comes from Whop auth
+      const mockWhopUserId = "demo_user_" + companyId;
+      const response = await fetch(`/api/billing/status?whopUserId=${mockWhopUserId}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setBillingStatus(data);
+      } else if (response.status === 404) {
+        // User doesn't exist yet - that's okay
+        setBillingStatus(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch billing status:", error);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, [companyId]);
+
+  useEffect(() => {
+    fetchBillingStatus();
+  }, [fetchBillingStatus]);
+
+  // Connect payment method
+  const handleConnectPayment = async () => {
+    try {
+      setConnectingPayment(true);
+      const mockWhopUserId = "demo_user_" + companyId;
+
+      const response = await fetch("/api/billing/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whopUserId: mockWhopUserId,
+          whopCompanyId: companyId,
+          whopMemberId: "demo_member_" + companyId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else if (data.alreadyConnected) {
+        fetchBillingStatus();
+      }
+    } catch (error) {
+      console.error("Failed to setup billing:", error);
+    } finally {
+      setConnectingPayment(false);
+    }
+  };
 
   const handleEdit = (product: typeof mockProducts[0]) => {
     setSelectedProduct(product);
@@ -171,6 +278,196 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-zinc-500 text-sm mt-4">32 conversions from 267 views</p>
+          </div>
+        </div>
+
+        {/* Billing Section */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+          <div className="p-6 border-b border-zinc-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Stacker Billing</h2>
+                <p className="text-zinc-400 text-sm mt-1">
+                  We charge 5% on successful upsells — we only make money when you do
+                </p>
+              </div>
+              {billingStatus?.user?.paymentMethodConnected && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm">
+                  <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Payment Connected
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6">
+            {billingLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-8 w-8 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
+              </div>
+            ) : !billingStatus?.user?.paymentMethodConnected ? (
+              /* No Payment Method Connected - Show Banner */
+              <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 h-12 w-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-white mb-1">Connect a payment method to activate upsells</h3>
+                    <p className="text-zinc-400 text-sm mb-4">
+                      Stacker is free to use. We only charge 5% on successful upsells made through our app.
+                      Billing happens automatically every 7 days.
+                    </p>
+                    <button
+                      onClick={handleConnectPayment}
+                      disabled={connectingPayment}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {connectingPayment ? (
+                        <>
+                          <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Connect Payment Method
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {billingSuccess && (
+                  <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+                    <p className="text-green-400 text-sm">Payment method connected successfully! Refreshing...</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Payment Method Connected - Show Billing Info */
+              <div className="space-y-6">
+                {/* Billing Stats */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                    <p className="text-zinc-400 text-sm">Current Bill</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      ${billingStatus.billing.pendingFee.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                    <p className="text-zinc-400 text-sm">Next Payment</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      {billingStatus.billing.daysTillBilling > 0
+                        ? `in ${billingStatus.billing.daysTillBilling} days`
+                        : "Today"}
+                    </p>
+                  </div>
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                    <p className="text-zinc-400 text-sm">This Period</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      {billingStatus.billing.pendingTransactionCount} upsells
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recent Transactions */}
+                {billingStatus.recentTransactions.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-zinc-400 mb-3">Recent Transactions</h3>
+                    <div className="space-y-2">
+                      {billingStatus.recentTransactions.map((t) => (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-white text-sm font-medium">{t.productName}</p>
+                              <p className="text-zinc-500 text-xs">
+                                {new Date(t.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-white text-sm">${t.saleAmount.toFixed(2)} sale</p>
+                            <p className="text-green-400 text-xs">${t.feeAmount.toFixed(2)} fee</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Invoices */}
+                {billingStatus.recentInvoices.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-zinc-400 mb-3">Past Invoices</h3>
+                    <div className="space-y-2">
+                      {billingStatus.recentInvoices.map((i) => (
+                        <div
+                          key={i.id}
+                          className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                              i.status === "paid" ? "bg-green-500/10" : "bg-orange-500/10"
+                            }`}>
+                              {i.status === "paid" ? (
+                                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white text-sm font-medium">
+                                {new Date(i.periodStart).toLocaleDateString()} - {new Date(i.periodEnd).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <p className="text-white text-sm">${i.totalFee.toFixed(2)}</p>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              i.status === "paid"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-orange-500/20 text-orange-400"
+                            }`}>
+                              {i.status === "paid" ? "Paid" : i.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {billingStatus.recentTransactions.length === 0 && billingStatus.recentInvoices.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="h-12 w-12 bg-zinc-800 rounded-full mx-auto flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <p className="text-zinc-400 text-sm">No transactions yet</p>
+                    <p className="text-zinc-500 text-xs mt-1">Transactions will appear here when upsells are made</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
