@@ -38,10 +38,7 @@ export async function GET(
     // Get experience details from Whop
     // The experience contains the company_id we need
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const experience = await (whopsdk.experiences as any).getExperience({
-        experienceId: experienceId,
-      });
+      const experience = await whopsdk.experiences.retrieve(experienceId);
 
       if (!experience) {
         return NextResponse.json(
