@@ -122,65 +122,67 @@ export default function ExperiencePage() {
             <p className="text-zinc-400">No products available</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {products.map((product) => (
               <div
                 key={product.id}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors"
+                className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
               >
-                {/* Product Image */}
-                <div className="aspect-video bg-zinc-800 flex items-center justify-center">
-                  {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <svg className="w-12 h-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  )}
-                </div>
-
-                {/* Product Info */}
-                <div className="p-4">
-                  <h3 className="text-white font-semibold mb-1">{product.title}</h3>
-                  {product.description && (
-                    <p className="text-zinc-500 text-sm mb-3 line-clamp-2">{product.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {product.owned ? (
-                        <span className="text-zinc-400 font-medium">Purchased</span>
-                      ) : (
-                        <>
-                          <span className="text-green-500 font-bold">
-                            {formatPrice(product.price, product.currency)}
-                          </span>
-                          {product.planType === "renewal" && product.billingPeriod && (
-                            <span className="text-zinc-500 text-sm">
-                              /{product.billingPeriod === 30 ? "mo" : product.billingPeriod === 365 ? "yr" : `${product.billingPeriod}d`}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    {product.owned ? (
-                      <span className="px-3 py-1.5 bg-zinc-800 text-zinc-400 text-sm font-medium rounded-lg">
-                        Owned
-                      </span>
+                {/* Product Header */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.title}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="elevated"
-                        onClick={() => handlePurchase(product)}
-                      >
-                        Buy
-                      </Button>
+                      <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
                     )}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-semibold text-sm truncate">{product.title}</h3>
+                    {product.description && (
+                      <p className="text-zinc-500 text-xs line-clamp-1">{product.description}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Price and Action */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    {product.owned ? (
+                      <span className="text-zinc-500 text-sm">Owned</span>
+                    ) : (
+                      <>
+                        <span className="text-green-500 font-bold text-sm">
+                          {formatPrice(product.price, product.currency)}
+                        </span>
+                        {product.planType === "renewal" && product.billingPeriod && (
+                          <span className="text-zinc-500 text-xs">
+                            /{product.billingPeriod === 30 ? "mo" : product.billingPeriod === 365 ? "yr" : `${product.billingPeriod}d`}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {product.owned ? (
+                    <span className="px-2 py-1 bg-zinc-800 text-zinc-500 text-xs font-medium rounded">
+                      Purchased
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="elevated"
+                      onClick={() => handlePurchase(product)}
+                      className="text-xs px-3 py-1"
+                    >
+                      Buy
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
