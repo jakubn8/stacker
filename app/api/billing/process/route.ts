@@ -7,6 +7,7 @@ import {
   updateInvoiceStatus,
   incrementInvoiceRetryCount,
   updateUserNextBillingDate,
+  updateBillingStatus,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
 
@@ -176,6 +177,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 : "Unknown error",
           });
           await incrementInvoiceRetryCount(invoice.id);
+
+          // Set user to lockout status - they can't use the app until they fix payment
+          await updateBillingStatus(user.id, "unpaid_lockout");
+          console.log(`User ${user.id} set to unpaid_lockout status`);
 
           results.failed++;
           results.details.push({

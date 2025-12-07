@@ -11,6 +11,8 @@ import {
   getInvoiceByWhopPaymentId,
   markTransactionsAsInvoiced,
   updateUserNextBillingDate,
+  updateBillingStatus,
+  incrementTotalRevenue,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
 
@@ -100,6 +102,9 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
       );
       await updateUserNextBillingDate(invoice.userId, sevenDaysFromNow);
 
+      // Restore user to active status (in case they were in lockout)
+      await updateBillingStatus(invoice.userId, "active");
+
       console.log("Invoice marked as paid:", invoice.id);
     }
     return;
@@ -143,7 +148,10 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     currency,
   });
 
-  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount);
+  // Increment total revenue for this user (amount is already in cents)
+  await incrementTotalRevenue(user.id, amount);
+
+  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents");
 }
 
 /**

@@ -5,6 +5,32 @@ import { Timestamp, FieldValue } from "firebase-admin/firestore";
 // TYPES
 // ============================================
 
+export interface OfferPageSettings {
+  headline: string;
+  subheadline: string;
+  buttonText: string;
+  bulletPoints: string[];
+  showSocialProof: boolean;
+  reviewText: string;
+  reviewAuthor: string;
+  reviewStars: number;
+}
+
+export interface ProductOverride {
+  customTitle: string | null;
+  customDescription: string | null;
+  customImageUrl: string | null;
+  showDiscount: boolean;
+  originalPriceCents: number | null;
+}
+
+export interface FlowConfig {
+  isActive: boolean;
+  triggerProductId: string | null;
+  upsellProductId: string | null;
+  downsellProductId: string | null;
+}
+
 export interface User {
   id: string;
   whopCompanyId: string;
@@ -13,8 +39,13 @@ export interface User {
   email: string | null;
   paymentMethodId: string | null;
   paymentMethodConnected: boolean;
+  billingStatus: "active" | "unpaid_lockout";
   billingCycleStart: Timestamp | null;
   nextBillingDate: Timestamp | null;
+  totalRevenueGeneratedCents: number;
+  flowConfig: FlowConfig;
+  offerPageSettings: OfferPageSettings;
+  productOverrides: Record<string, ProductOverride>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -101,6 +132,25 @@ export async function getUserByWhopUserId(whopUserId: string): Promise<User | nu
   return { id: doc.id, ...doc.data() } as User;
 }
 
+// Default settings for new users
+const DEFAULT_OFFER_PAGE_SETTINGS: OfferPageSettings = {
+  headline: "Wait! Your order isn't complete...",
+  subheadline: "Add this exclusive offer to your purchase",
+  buttonText: "Yes, Upgrade My Order",
+  bulletPoints: ["Exclusive bonus content", "Priority support", "Lifetime updates"],
+  showSocialProof: true,
+  reviewText: "This was exactly what I needed! Highly recommend.",
+  reviewAuthor: "@HappyCustomer",
+  reviewStars: 5,
+};
+
+const DEFAULT_FLOW_CONFIG: FlowConfig = {
+  isActive: false,
+  triggerProductId: null,
+  upsellProductId: null,
+  downsellProductId: null,
+};
+
 export async function createUser(data: {
   whopCompanyId: string;
   whopMemberId: string;
@@ -115,8 +165,13 @@ export async function createUser(data: {
     email: data.email,
     paymentMethodId: null,
     paymentMethodConnected: false,
+    billingStatus: "active" as const,
     billingCycleStart: null,
     nextBillingDate: null,
+    totalRevenueGeneratedCents: 0,
+    flowConfig: DEFAULT_FLOW_CONFIG,
+    offerPageSettings: DEFAULT_OFFER_PAGE_SETTINGS,
+    productOverrides: {},
     createdAt: now,
     updatedAt: now,
   };
@@ -157,6 +212,108 @@ export async function removeUserPaymentMethod(userId: string): Promise<void> {
   await db.collection("users").doc(userId).update({
     paymentMethodId: null,
     paymentMethodConnected: false,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function updateBillingStatus(
+  userId: string,
+  status: "active" | "unpaid_lockout"
+): Promise<void> {
+  await db.collection("users").doc(userId).update({
+    billingStatus: status,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function updateFlowConfig(
+  userId: string,
+  flowConfig: Partial<FlowConfig>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const updatedFlowConfig = {
+    ...user.flowConfig,
+    ...flowConfig,
+  };
+
+  await db.collection("users").doc(userId).update({
+    flowConfig: updatedFlowConfig,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function updateOfferPageSettings(
+  userId: string,
+  settings: Partial<OfferPageSettings>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const updatedSettings = {
+    ...user.offerPageSettings,
+    ...settings,
+  };
+
+  await db.collection("users").doc(userId).update({
+    offerPageSettings: updatedSettings,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function updateProductOverride(
+  userId: string,
+  productId: string,
+  override: Partial<ProductOverride>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const existingOverride = user.productOverrides[productId] || {
+    customTitle: null,
+    customDescription: null,
+    customImageUrl: null,
+    showDiscount: false,
+    originalPriceCents: null,
+  };
+
+  const updatedOverrides = {
+    ...user.productOverrides,
+    [productId]: {
+      ...existingOverride,
+      ...override,
+    },
+  };
+
+  await db.collection("users").doc(userId).update({
+    productOverrides: updatedOverrides,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function removeProductOverride(
+  userId: string,
+  productId: string
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const updatedOverrides = { ...user.productOverrides };
+  delete updatedOverrides[productId];
+
+  await db.collection("users").doc(userId).update({
+    productOverrides: updatedOverrides,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function incrementTotalRevenue(
+  userId: string,
+  amountCents: number
+): Promise<void> {
+  await db.collection("users").doc(userId).update({
+    totalRevenueGeneratedCents: FieldValue.increment(amountCents),
     updatedAt: Timestamp.now(),
   });
 }
