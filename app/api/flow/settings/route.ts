@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getUserByWhopUserId,
+  createUser,
   getOfferSettings,
   updateOfferSettings,
   updateFlowConfig,
@@ -13,13 +14,15 @@ import { verifyAuthFromRequest } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/flow/settings?whopUserId=xxx
+ * GET /api/flow/settings?whopUserId=xxx&companyId=biz_xxx
  * Returns flow config and offer settings for a user
+ * Auto-creates user if not found
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     let whopUserId = searchParams.get("whopUserId");
+    const companyId = searchParams.get("companyId");
 
     // Try to verify authentication from token
     const authResult = await verifyAuthFromRequest(request);
@@ -35,12 +38,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const user = await getUserByWhopUserId(whopUserId);
+    let user = await getUserByWhopUserId(whopUserId);
+
+    // Auto-create user if not found
+    if (!user && companyId) {
+      console.log(`Auto-creating user: ${whopUserId} for company: ${companyId}`);
+      user = await createUser({
+        whopUserId,
+        whopCompanyId: companyId,
+        email: null,
+      });
+    }
+
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      // Return empty defaults if no companyId provided to create user
+      return NextResponse.json({
+        success: true,
+        flowConfig: null,
+        offerSettings: null,
+        notificationSettings: null,
+      });
     }
 
     const offerSettings = await getOfferSettings(user.id);
@@ -64,12 +81,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 /**
  * POST /api/flow/settings
  * Save flow config and/or offer settings
- * Body: { whopUserId, flowConfig?, upsellSettings?, downsellSettings? }
+ * Body: { whopUserId, companyId?, flowConfig?, upsellSettings?, downsellSettings? }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    let { whopUserId, flowConfig, upsellSettings, downsellSettings } = body;
+    let { whopUserId, companyId, flowConfig, upsellSettings, downsellSettings } = body;
 
     // Try to verify authentication from token
     const authResult = await verifyAuthFromRequest(request);
@@ -85,10 +102,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const user = await getUserByWhopUserId(whopUserId);
+    let user = await getUserByWhopUserId(whopUserId);
+
+    // Auto-create user if not found
+    if (!user && companyId) {
+      console.log(`Auto-creating user on save: ${whopUserId} for company: ${companyId}`);
+      user = await createUser({
+        whopUserId,
+        whopCompanyId: companyId,
+        email: null,
+      });
+    }
+
     if (!user) {
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "User not found and no companyId provided to create one" },
         { status: 404 }
       );
     }

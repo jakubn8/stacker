@@ -206,14 +206,14 @@ const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 
 export async function createUser(data: {
   whopCompanyId: string;
-  whopMemberId: string;
+  whopMemberId?: string; // Optional - will use whopUserId as fallback
   whopUserId: string;
   email: string | null;
 }): Promise<User> {
   const now = Timestamp.now();
   const userData = {
     whopCompanyId: data.whopCompanyId,
-    whopMemberId: data.whopMemberId,
+    whopMemberId: data.whopMemberId || data.whopUserId, // Use userId as fallback
     whopUserId: data.whopUserId,
     email: data.email,
     paymentMethodId: null,

@@ -113,7 +113,7 @@ export default function EditorPage() {
       // Fetch settings and products in parallel
       // Use realCompanyId for Whop API - only fetch products if we have a valid company ID
       const [settingsResponse, productsResponse] = await Promise.all([
-        fetch(`/api/flow/settings?whopUserId=${whopUserId}`),
+        fetch(`/api/flow/settings?whopUserId=${whopUserId}&companyId=${realCompanyId || companyId}`),
         realCompanyId ? fetch(`/api/products?companyId=${realCompanyId}`) : Promise.resolve(null),
       ]);
 
@@ -228,6 +228,7 @@ export default function EditorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           whopUserId,
+          companyId: realCompanyId || companyId,
           upsellSettings,
           downsellSettings,
         }),

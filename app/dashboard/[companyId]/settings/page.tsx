@@ -230,7 +230,7 @@ export default function DashboardPage() {
   const fetchFlowConfig = useCallback(async () => {
     try {
       setFlowConfigLoading(true);
-      const response = await fetch(`/api/flow/settings?whopUserId=${whopUserId}`);
+      const response = await fetch(`/api/flow/settings?whopUserId=${whopUserId}&companyId=${realCompanyId || companyId}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -256,7 +256,7 @@ export default function DashboardPage() {
     } finally {
       setFlowConfigLoading(false);
     }
-  }, [whopUserId]);
+  }, [whopUserId, companyId, realCompanyId]);
 
   useEffect(() => {
     fetchFlowConfig();
@@ -303,6 +303,7 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           whopUserId,
+          companyId: realCompanyId || companyId,
           flowConfig: config,
         }),
       });
@@ -315,7 +316,7 @@ export default function DashboardPage() {
     } finally {
       setFlowSaving(false);
     }
-  }, [whopUserId]);
+  }, [whopUserId, companyId, realCompanyId]);
 
   // Handlers that save to database
   const handleSetIsActive = (active: boolean) => {

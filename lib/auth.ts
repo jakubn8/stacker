@@ -134,7 +134,7 @@ export async function checkCompanyAccess(
 export async function ensureUserExists(data: {
   whopUserId: string;
   whopCompanyId: string;
-  whopMemberId: string;
+  whopMemberId?: string; // Optional - will use whopUserId as fallback
   email?: string | null;
 }): Promise<string> {
   // Check if user exists
