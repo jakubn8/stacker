@@ -7,6 +7,7 @@ export function getWhopSDK(): Whop {
   if (!_whopsdk) {
     _whopsdk = new Whop({
       apiKey: process.env.WHOP_API_KEY,
+      appID: process.env.WHOP_APP_ID, // Required for token verification
       webhookKey: process.env.WHOP_WEBHOOK_SECRET
         ? btoa(process.env.WHOP_WEBHOOK_SECRET)
         : undefined,
@@ -23,6 +24,9 @@ export const whopsdk = {
   get payments() {
     return getWhopSDK().payments;
   },
+  get paymentMethods() {
+    return getWhopSDK().paymentMethods;
+  },
   get checkoutConfigurations() {
     return getWhopSDK().checkoutConfigurations;
   },
@@ -38,10 +42,32 @@ export const whopsdk = {
   get companies() {
     return getWhopSDK().companies;
   },
+  get users() {
+    return getWhopSDK().users;
+  },
+  get authorizedUsers() {
+    return getWhopSDK().authorizedUsers;
+  },
+  get notifications() {
+    return getWhopSDK().notifications;
+  },
+  get experiences() {
+    return getWhopSDK().experiences;
+  },
+  // Authentication method
+  verifyUserToken: async (
+    headersOrRequest: Headers | Request | string | null | undefined,
+    options?: { dontThrow?: boolean }
+  ) => {
+    return getWhopSDK().verifyUserToken(headersOrRequest, options);
+  },
 };
 
 // Stacker's company ID (where we receive billing payments)
 export const STACKER_COMPANY_ID = process.env.WHOP_COMPANY_ID || "";
+
+// Stacker's App ID
+export const STACKER_APP_ID = process.env.WHOP_APP_ID || "";
 
 // Export for convenience
 export { Whop };

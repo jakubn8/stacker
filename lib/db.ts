@@ -16,6 +16,12 @@ export interface OfferPageSettings {
   reviewStars: number;
 }
 
+// Separate settings for upsell and downsell offers
+export interface FlowOfferSettings {
+  upsell: OfferPageSettings;
+  downsell: OfferPageSettings;
+}
+
 export interface ProductOverride {
   customTitle: string | null;
   customDescription: string | null;
@@ -29,6 +35,21 @@ export interface FlowConfig {
   triggerProductId: string | null;
   upsellProductId: string | null;
   downsellProductId: string | null;
+}
+
+export interface NotificationSettings {
+  title: string;
+  content: string;
+  enabled: boolean;
+}
+
+export interface AnalyticsData {
+  totalViews: number;
+  totalConversions: number;
+  weeklyViews: number;
+  weeklyConversions: number;
+  weeklyRevenueGeneratedCents: number;
+  lastResetAt: Timestamp; // When weekly stats were last reset
 }
 
 export interface User {
@@ -47,8 +68,14 @@ export interface User {
   gracePeriodEndsAt: Timestamp | null;
   lastFailedInvoiceId: string | null;
   totalRevenueGeneratedCents: number;
+  // Analytics tracking
+  analytics: AnalyticsData;
   flowConfig: FlowConfig;
-  offerPageSettings: OfferPageSettings;
+  offerSettings: FlowOfferSettings;
+  notificationSettings: NotificationSettings;
+  // Hidden products (not shown in storefront)
+  hiddenProductIds: string[];
+  // Legacy field - kept for backwards compatibility
   productOverrides: Record<string, ProductOverride>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -137,7 +164,7 @@ export async function getUserByWhopUserId(whopUserId: string): Promise<User | nu
 }
 
 // Default settings for new users
-const DEFAULT_OFFER_PAGE_SETTINGS: OfferPageSettings = {
+const DEFAULT_UPSELL_SETTINGS: OfferPageSettings = {
   headline: "Wait! Your order isn't complete...",
   subheadline: "Add this exclusive offer to your purchase",
   buttonText: "Yes, Upgrade My Order",
@@ -148,11 +175,33 @@ const DEFAULT_OFFER_PAGE_SETTINGS: OfferPageSettings = {
   reviewStars: 5,
 };
 
+const DEFAULT_DOWNSELL_SETTINGS: OfferPageSettings = {
+  headline: "Before you go...",
+  subheadline: "Here's a special offer just for you",
+  buttonText: "Yes, I Want This Deal",
+  bulletPoints: ["Quick start guide included", "Email support for 30 days", "Instant digital delivery"],
+  showSocialProof: true,
+  reviewText: "Great value for the price! Exactly what I needed to get started.",
+  reviewAuthor: "@NewCustomer",
+  reviewStars: 5,
+};
+
+const DEFAULT_OFFER_SETTINGS: FlowOfferSettings = {
+  upsell: DEFAULT_UPSELL_SETTINGS,
+  downsell: DEFAULT_DOWNSELL_SETTINGS,
+};
+
 const DEFAULT_FLOW_CONFIG: FlowConfig = {
   isActive: false,
   triggerProductId: null,
   upsellProductId: null,
   downsellProductId: null,
+};
+
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  title: "🎁 Wait! Your order isn't complete...",
+  content: "You unlocked an exclusive offer! Tap to claim it now.",
+  enabled: true,
 };
 
 export async function createUser(data: {
@@ -176,8 +225,18 @@ export async function createUser(data: {
     gracePeriodEndsAt: null,
     lastFailedInvoiceId: null,
     totalRevenueGeneratedCents: 0,
+    analytics: {
+      totalViews: 0,
+      totalConversions: 0,
+      weeklyViews: 0,
+      weeklyConversions: 0,
+      weeklyRevenueGeneratedCents: 0,
+      lastResetAt: now,
+    },
     flowConfig: DEFAULT_FLOW_CONFIG,
-    offerPageSettings: DEFAULT_OFFER_PAGE_SETTINGS,
+    offerSettings: DEFAULT_OFFER_SETTINGS,
+    notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
+    hiddenProductIds: [],
     productOverrides: {},
     createdAt: now,
     updatedAt: now,
@@ -345,22 +404,80 @@ export async function updateFlowConfig(
   });
 }
 
-export async function updateOfferPageSettings(
+export async function updateOfferSettings(
   userId: string,
+  type: "upsell" | "downsell",
   settings: Partial<OfferPageSettings>
 ): Promise<void> {
   const user = await getUser(userId);
   if (!user) throw new Error("User not found");
 
+  // Handle legacy users who don't have offerSettings yet
+  const currentSettings = user.offerSettings || DEFAULT_OFFER_SETTINGS;
+
   const updatedSettings = {
-    ...user.offerPageSettings,
+    ...currentSettings,
+    [type]: {
+      ...currentSettings[type],
+      ...settings,
+    },
+  };
+
+  await db.collection("users").doc(userId).update({
+    offerSettings: updatedSettings,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function getOfferSettings(userId: string): Promise<FlowOfferSettings> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  // Handle legacy users
+  return user.offerSettings || DEFAULT_OFFER_SETTINGS;
+}
+
+export async function updateNotificationSettings(
+  userId: string,
+  settings: Partial<NotificationSettings>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const currentSettings = user.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS;
+
+  const updatedSettings = {
+    ...currentSettings,
     ...settings,
   };
 
   await db.collection("users").doc(userId).update({
-    offerPageSettings: updatedSettings,
+    notificationSettings: updatedSettings,
     updatedAt: Timestamp.now(),
   });
+}
+
+export async function getNotificationSettings(userId: string): Promise<NotificationSettings> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  return user.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS;
+}
+
+export async function updateHiddenProducts(
+  userId: string,
+  hiddenProductIds: string[]
+): Promise<void> {
+  await db.collection("users").doc(userId).update({
+    hiddenProductIds,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function getHiddenProducts(userId: string): Promise<string[]> {
+  const user = await getUser(userId);
+  if (!user) return [];
+  return user.hiddenProductIds || [];
 }
 
 export async function updateProductOverride(
@@ -713,4 +830,158 @@ export async function getBillingSummary(userId: string): Promise<{
     nextBillingDate,
     daysTillBilling,
   };
+}
+
+// ============================================
+// ANALYTICS FUNCTIONS
+// ============================================
+
+/**
+ * Record an upsell page view (when the offer modal is shown)
+ */
+export async function recordUpsellView(userId: string): Promise<void> {
+  await db.collection("users").doc(userId).update({
+    "analytics.totalViews": FieldValue.increment(1),
+    "analytics.weeklyViews": FieldValue.increment(1),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Record an upsell conversion (when user purchases the upsell/downsell)
+ * Also updates weekly revenue
+ */
+export async function recordUpsellConversion(
+  userId: string,
+  revenueCents: number
+): Promise<void> {
+  await db.collection("users").doc(userId).update({
+    "analytics.totalConversions": FieldValue.increment(1),
+    "analytics.weeklyConversions": FieldValue.increment(1),
+    "analytics.weeklyRevenueGeneratedCents": FieldValue.increment(revenueCents),
+    totalRevenueGeneratedCents: FieldValue.increment(revenueCents),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Get analytics data for a user with calculated conversion rate
+ */
+export async function getAnalytics(userId: string): Promise<{
+  totalViews: number;
+  totalConversions: number;
+  conversionRate: number;
+  weeklyViews: number;
+  weeklyConversions: number;
+  weeklyRevenue: number;
+  totalRevenue: number;
+} | null> {
+  const user = await getUser(userId);
+  if (!user) return null;
+
+  // Handle users without analytics data (pre-update)
+  const analytics = user.analytics || {
+    totalViews: 0,
+    totalConversions: 0,
+    weeklyViews: 0,
+    weeklyConversions: 0,
+    weeklyRevenueGeneratedCents: 0,
+    lastResetAt: Timestamp.now(),
+  };
+
+  const conversionRate = analytics.totalViews > 0
+    ? Math.round((analytics.totalConversions / analytics.totalViews) * 100)
+    : 0;
+
+  return {
+    totalViews: analytics.totalViews,
+    totalConversions: analytics.totalConversions,
+    conversionRate,
+    weeklyViews: analytics.weeklyViews,
+    weeklyConversions: analytics.weeklyConversions,
+    weeklyRevenue: analytics.weeklyRevenueGeneratedCents / 100,
+    totalRevenue: user.totalRevenueGeneratedCents / 100,
+  };
+}
+
+/**
+ * Reset weekly analytics (called by cron job every week)
+ */
+export async function resetWeeklyAnalytics(userId: string): Promise<void> {
+  await db.collection("users").doc(userId).update({
+    "analytics.weeklyViews": 0,
+    "analytics.weeklyConversions": 0,
+    "analytics.weeklyRevenueGeneratedCents": 0,
+    "analytics.lastResetAt": Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Check if weekly analytics need to be reset (if last reset was more than 7 days ago)
+ */
+export async function checkAndResetWeeklyAnalyticsIfNeeded(userId: string): Promise<boolean> {
+  const user = await getUser(userId);
+  if (!user || !user.analytics?.lastResetAt) return false;
+
+  const lastReset = user.analytics.lastResetAt.toDate();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  if (lastReset < sevenDaysAgo) {
+    await resetWeeklyAnalytics(userId);
+    return true;
+  }
+
+  return false;
+}
+
+// ============================================
+// NOTIFICATION TRACKING (Deduplication)
+// ============================================
+
+/**
+ * Check if we've already sent an upsell notification to this user for this trigger
+ * Returns true if notification was already sent (should skip sending)
+ */
+export async function hasNotificationBeenSent(
+  ownerId: string,
+  buyerUserId: string,
+  triggerProductId: string
+): Promise<boolean> {
+  // Create a unique key for this notification
+  const notificationKey = `${ownerId}_${buyerUserId}_${triggerProductId}`;
+
+  const doc = await db.collection("sentNotifications").doc(notificationKey).get();
+  return doc.exists;
+}
+
+/**
+ * Record that we've sent a notification to prevent duplicates
+ */
+export async function recordSentNotification(
+  ownerId: string,
+  buyerUserId: string,
+  triggerProductId: string
+): Promise<void> {
+  const notificationKey = `${ownerId}_${buyerUserId}_${triggerProductId}`;
+
+  await db.collection("sentNotifications").doc(notificationKey).set({
+    ownerId,
+    buyerUserId,
+    triggerProductId,
+    sentAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Clear notification record (e.g., if user wants to receive offer again)
+ * This could be called when a user's membership expires/cancels
+ */
+export async function clearSentNotification(
+  ownerId: string,
+  buyerUserId: string,
+  triggerProductId: string
+): Promise<void> {
+  const notificationKey = `${ownerId}_${buyerUserId}_${triggerProductId}`;
+  await db.collection("sentNotifications").doc(notificationKey).delete();
 }

@@ -1,919 +1,185 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import {
-  Button,
-  Select,
-} from "@whop/frosted-ui";
+import { useParams } from "next/navigation";
+import DashboardNav from "@/components/DashboardNav";
 
-// Billing types
-interface BillingStatus {
-  user: {
-    id: string;
-    paymentMethodConnected: boolean;
-    email: string | null;
-  } | null;
-  billing: {
-    pendingFee: number;
-    pendingTransactionCount: number;
-    nextBillingDate: string | null;
-    daysTillBilling: number;
-  };
-  recentTransactions: Array<{
-    id: string;
-    productName: string;
-    saleAmount: number;
-    feeAmount: number;
-    createdAt: string;
-  }>;
-  recentInvoices: Array<{
-    id: string;
-    periodStart: string;
-    periodEnd: string;
-    totalFee: number;
-    status: string;
-  }>;
-}
-
-// Mock data
-const mockProducts = [
-  {
-    id: "1",
-    image: "/placeholder-product.png",
-    title: "Trading Course Masterclass",
-    description: "Complete trading education from beginner to advanced levels with live sessions.",
-    storefrontName: "Master Trading Course",
-    storefrontDescription: "Complete trading education from beginner to advanced levels with live sessions.",
-    price: "$199.00",
-    paymentType: "one_time" as const,
-  },
-  {
-    id: "2",
-    image: "/placeholder-product.png",
-    title: "VIP Signals Access",
-    description: "Daily premium trading signals with entry & exit points from our expert analysts.",
-    storefrontName: "Premium VIP Signals",
-    storefrontDescription: "Daily premium trading signals with entry & exit points from our expert analysts.",
-    price: "$49.00",
-    paymentType: "recurring" as const,
-  },
-  {
-    id: "3",
-    image: "/placeholder-product.png",
-    title: "Risk Management Protocol",
-    description: "Protect your capital with our battle-tested risk management strategies.",
-    storefrontName: "Risk Management Guide",
-    storefrontDescription: "Protect your capital with our battle-tested risk management strategies.",
-    price: "$19.00",
-    paymentType: "one_time" as const,
-  },
-  {
-    id: "4",
-    image: "/placeholder-product.png",
-    title: "Private Community Access",
-    description: "Join our exclusive Discord community with 5000+ active traders.",
-    storefrontName: "Exclusive Community",
-    storefrontDescription: "Join our exclusive Discord community with 5000+ active traders.",
-    price: "$29.00",
-    paymentType: "recurring" as const,
-  },
-];
-
-const triggerProducts = [
-  { value: "trading-course", textValue: "Trading Course Masterclass" },
-  { value: "vip-signals", textValue: "VIP Signals Access" },
-  { value: "risk-management", textValue: "Risk Management Protocol" },
-];
-
-const upsellProducts = [
-  { value: "vip-signals", textValue: "VIP Signals Access - $49.00" },
-  { value: "risk-management", textValue: "Risk Management Protocol - $19.00" },
-  { value: "private-community", textValue: "Private Community Access - $29.00" },
-];
-
-const downsellProducts = [
-  { value: "risk-management", textValue: "Risk Management Protocol - $19.00" },
-  { value: "private-community", textValue: "Private Community Access - $29.00" },
-];
-
-// Mock upsell flow configuration
-const mockFlowConfig = {
-  triggerProductId: "trading-course",
-  upsellProductId: "vip-signals",
-  downsellProductId: "risk-management", // Optional - can be null
-  isActive: true,
-};
-
-export default function DashboardPage() {
+export default function DashboardHome() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const companyId = params.companyId as string;
 
-  const [isActive, setIsActive] = useState(true);
-  const [triggerProduct, setTriggerProduct] = useState("");
-  const [upsellProduct, setUpsellProduct] = useState("");
-  const [hasDownsell, setHasDownsell] = useState(false);
-  const [downsellProduct, setDownsellProduct] = useState("");
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<typeof mockProducts[0] | null>(null);
-  const [editedName, setEditedName] = useState("");
-  const [editedDescription, setEditedDescription] = useState("");
-  const [showDiscount, setShowDiscount] = useState(false);
-  const [originalPrice, setOriginalPrice] = useState("");
+  const views = [
+    {
+      title: "Dashboard & Analytics",
+      description: "Configure upsells, billing, and view performance",
+      href: `/dashboard/${companyId}/settings`,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      iconColor: "text-purple-400",
+      bgColor: "bg-purple-500/10",
+    },
+    {
+      title: "Offer Page Editor",
+      description: "Customize your upsell and downsell pages",
+      href: `/dashboard/${companyId}/editor`,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+      iconColor: "text-green-400",
+      bgColor: "bg-green-500/10",
+    },
+    {
+      title: "Offer Preview",
+      description: "See how your upsells look to customers",
+      href: `/dashboard/${companyId}/preview`,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      ),
+      iconColor: "text-blue-400",
+      bgColor: "bg-blue-500/10",
+    },
+  ];
 
-  // Billing state
-  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
-  const [billingLoading, setBillingLoading] = useState(true);
-  const [connectingPayment, setConnectingPayment] = useState(false);
-  const [billingSuccess, setBillingSuccess] = useState(false);
-
-  // Check for billing success from redirect
-  useEffect(() => {
-    if (searchParams.get("billing") === "success") {
-      setBillingSuccess(true);
-      // Clear the URL param
-      window.history.replaceState({}, "", `/dashboard/${companyId}`);
-      // Refresh billing status
-      fetchBillingStatus();
-    }
-  }, [searchParams, companyId]);
-
-  // Fetch billing status
-  const fetchBillingStatus = useCallback(async () => {
-    try {
-      setBillingLoading(true);
-      // For demo, we'll use a mock whopUserId - in production this comes from Whop auth
-      const mockWhopUserId = "demo_user_" + companyId;
-      const response = await fetch(`/api/billing/status?whopUserId=${mockWhopUserId}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        setBillingStatus(data);
-      } else if (response.status === 404) {
-        // User doesn't exist yet - that's okay
-        setBillingStatus(null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch billing status:", error);
-    } finally {
-      setBillingLoading(false);
-    }
-  }, [companyId]);
-
-  useEffect(() => {
-    fetchBillingStatus();
-  }, [fetchBillingStatus]);
-
-  // Connect payment method
-  const handleConnectPayment = async () => {
-    try {
-      setConnectingPayment(true);
-      const mockWhopUserId = "demo_user_" + companyId;
-
-      const response = await fetch("/api/billing/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          whopUserId: mockWhopUserId,
-          whopCompanyId: companyId,
-          whopMemberId: "demo_member_" + companyId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else if (data.alreadyConnected) {
-        fetchBillingStatus();
-      }
-    } catch (error) {
-      console.error("Failed to setup billing:", error);
-    } finally {
-      setConnectingPayment(false);
-    }
-  };
-
-  const handleEdit = (product: typeof mockProducts[0]) => {
-    setSelectedProduct(product);
-    setEditedName(product.storefrontName);
-    setEditedDescription(product.storefrontDescription);
-    setShowDiscount(false);
-    setOriginalPrice("");
-    setEditModalOpen(true);
-  };
-
-  const handleRemoveDownsell = () => {
-    setHasDownsell(false);
-    setDownsellProduct("");
-  };
-
-  // Sync hasDownsell state to localStorage for editor page
-  useEffect(() => {
-    localStorage.setItem("stacker_hasDownsell", JSON.stringify(hasDownsell));
-  }, [hasDownsell]);
+  const steps = [
+    {
+      number: "1",
+      title: "Customer buys your product",
+      description: "Any product you choose as a trigger",
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+    },
+    {
+      number: "2",
+      title: "We send them an instant notification",
+      description: "Push notification with your upsell offer",
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+    },
+    {
+      number: "3",
+      title: "They upgrade with one tap",
+      description: "Seamless checkout, instant revenue",
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-zinc-950">
+      <DashboardNav companyId={companyId} />
+      <div className="flex items-center justify-center p-6">
+        <div className="max-w-4xl w-full">
         {/* Header */}
-        <div className="border-b border-zinc-800 pb-6">
-          <h1 className="text-3xl font-bold text-white">Stacker Configuration</h1>
-          <p className="text-zinc-400 mt-2">
-            Configure your post-purchase upsells and storefront display settings
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 mb-4">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span className="text-green-400 text-sm font-medium">Add 20% to your monthly recurring revenue</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+            Stacker
+          </h1>
+          <p className="text-zinc-400 text-lg max-w-xl mx-auto">
+            Post-purchase upsells for Whop
           </p>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Total Revenue Card */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-400 text-sm font-medium">Total Revenue Generated</p>
-                <p className="text-4xl font-bold text-green-500 mt-2">$1,250.00</p>
-              </div>
-              <div className="h-12 w-12 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <p className="text-zinc-500 text-sm mt-4">+$350.00 this week</p>
-          </div>
+        {/* How It Works - Frosted Glass Section */}
+        <div className="relative mb-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-purple-500/10 to-orange-500/10 rounded-2xl blur-xl"></div>
+          <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+            <h2 className="text-center text-zinc-400 text-sm font-medium uppercase tracking-wider mb-6">
+              How it works
+            </h2>
 
-          {/* Conversion Rate Card */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-400 text-sm font-medium">Conversion Rate</p>
-                <p className="text-4xl font-bold text-white mt-2">12%</p>
-              </div>
-              <div className="h-12 w-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-purple-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-              </div>
-            </div>
-            <p className="text-zinc-500 text-sm mt-4">32 conversions from 267 views</p>
-          </div>
-        </div>
-
-        {/* Billing Section */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="p-6 border-b border-zinc-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Stacker Billing</h2>
-                <p className="text-zinc-400 text-sm mt-1">
-                  We charge 5% on successful upsells — we only make money when you do
-                </p>
-              </div>
-              {billingStatus?.user?.paymentMethodConnected && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm">
-                  <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></span>
-                  Payment Connected
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="p-6">
-            {billingLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-8 w-8 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
-              </div>
-            ) : !billingStatus?.user?.paymentMethodConnected ? (
-              /* No Payment Method Connected - Show Banner */
-              <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 h-12 w-12 bg-green-500/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">Connect a payment method to activate upsells</h3>
-                    <p className="text-zinc-400 text-sm mb-4">
-                      Stacker is free to use. We only charge 5% on successful upsells made through our app.
-                      Billing happens automatically every 7 days.
-                    </p>
-                    <button
-                      onClick={handleConnectPayment}
-                      disabled={connectingPayment}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
-                    >
-                      {connectingPayment ? (
-                        <>
-                          <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          Connect Payment Method
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {billingSuccess && (
-                  <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
-                    <p className="text-green-400 text-sm">Payment method connected successfully! Refreshing...</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Payment Method Connected - Show Billing Info */
-              <div className="space-y-6">
-                {/* Billing Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Current Bill</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      ${billingStatus.billing.pendingFee.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Next Payment</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      {billingStatus.billing.daysTillBilling > 0
-                        ? `in ${billingStatus.billing.daysTillBilling} days`
-                        : "Today"}
-                    </p>
-                  </div>
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">This Period</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      {billingStatus.billing.pendingTransactionCount} upsells
-                    </p>
-                  </div>
-                </div>
-
-                {/* Recent Transactions */}
-                {billingStatus.recentTransactions.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-zinc-400 mb-3">Recent Transactions</h3>
-                    <div className="space-y-2">
-                      {billingStatus.recentTransactions.map((t) => (
-                        <div
-                          key={t.id}
-                          className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 bg-green-500/10 rounded-lg flex items-center justify-center">
-                              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-white text-sm font-medium">{t.productName}</p>
-                              <p className="text-zinc-500 text-xs">
-                                {new Date(t.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-white text-sm">${t.saleAmount.toFixed(2)} sale</p>
-                            <p className="text-green-400 text-xs">${t.feeAmount.toFixed(2)} fee</p>
-                          </div>
-                        </div>
-                      ))}
+            <div className="flex items-center justify-center gap-4">
+              {steps.map((step, index) => (
+                <div key={step.number} className="flex items-center">
+                  {/* Step Card */}
+                  <div className="flex flex-col items-center text-center w-[140px]">
+                    <div className="h-11 w-11 rounded-xl bg-zinc-800/80 border border-zinc-700 flex items-center justify-center mb-2">
+                      <span className="text-green-400 [&>svg]:w-5 [&>svg]:h-5">{step.icon}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Recent Invoices */}
-                {billingStatus.recentInvoices.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-zinc-400 mb-3">Past Invoices</h3>
-                    <div className="space-y-2">
-                      {billingStatus.recentInvoices.map((i) => (
-                        <div
-                          key={i.id}
-                          className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                              i.status === "paid" ? "bg-green-500/10" : "bg-orange-500/10"
-                            }`}>
-                              {i.status === "paid" ? (
-                                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              ) : (
-                                <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-white text-sm font-medium">
-                                {new Date(i.periodStart).toLocaleDateString()} - {new Date(i.periodEnd).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <p className="text-white text-sm">${i.totalFee.toFixed(2)}</p>
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              i.status === "paid"
-                                ? "bg-green-500/20 text-green-400"
-                                : "bg-orange-500/20 text-orange-400"
-                            }`}>
-                              {i.status === "paid" ? "Paid" : i.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty State */}
-                {billingStatus.recentTransactions.length === 0 && billingStatus.recentInvoices.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="h-12 w-12 bg-zinc-800 rounded-full mx-auto flex items-center justify-center mb-3">
-                      <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <p className="text-zinc-400 text-sm">No transactions yet</p>
-                    <p className="text-zinc-500 text-xs mt-1">Transactions will appear here when upsells are made</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Upsell Flow Builder */}
-        <div className="space-y-0">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Upsell Flow</h2>
-              <p className="text-zinc-400 text-sm mt-1">
-                Build your post-purchase upsell sequence
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/dashboard/demo-company/editor"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit Offer Page
-              </Link>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-zinc-400">
-                  {isActive ? "Active" : "Inactive"}
-                </span>
-                <button
-                  onClick={() => setIsActive(!isActive)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                    isActive ? "bg-green-500" : "bg-red-500/80"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isActive ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 1: The Trigger */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-purple-400 uppercase tracking-wide">Step 1</span>
-                  <span className="text-xs text-zinc-600">•</span>
-                  <span className="text-xs text-zinc-500">The Trigger</span>
-                </div>
-                <label className="text-sm font-medium text-white block mb-2">When this product is purchased...</label>
-                <Select
-                  placeholder="Select trigger product..."
-                  value={triggerProduct}
-                  onValueChange={setTriggerProduct}
-                  size="md"
-                  items={triggerProducts}
-                  className="px-4 cursor-pointer"
-                  contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-purple-500 [&_svg]:hidden"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Connector Line 1 */}
-          <div className="flex justify-start pl-9">
-            <div className="h-8 w-0.5 bg-zinc-700" />
-          </div>
-
-          {/* Step 2: Primary Upsell */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-green-400 uppercase tracking-wide">Step 2</span>
-                  <span className="text-xs text-zinc-600">•</span>
-                  <span className="text-xs text-zinc-500">Primary Upsell</span>
-                </div>
-                <label className="text-sm font-medium text-white block mb-2">Show this product</label>
-                <Select
-                  placeholder="Select upsell product..."
-                  value={upsellProduct}
-                  onValueChange={setUpsellProduct}
-                  size="md"
-                  items={upsellProducts}
-                  className="px-4 cursor-pointer"
-                  contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-green-500 [&_svg]:hidden"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Connector Line 2 with Label */}
-          <div className="flex items-center pl-9 gap-3">
-            <div className="h-8 w-0.5 bg-zinc-700" />
-            <div className="flex items-center gap-2 -ml-1">
-              <div className="h-0.5 w-4 bg-zinc-700" />
-              <span className="text-xs text-orange-400 bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
-                If user clicks &apos;No&apos;...
-              </span>
-            </div>
-          </div>
-
-          {/* Step 3: Downsell (Conditional) */}
-          {hasDownsell ? (
-            <div className="bg-zinc-900 border border-orange-500/30 rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-orange-400 uppercase tracking-wide">Step 3</span>
-                      <span className="text-xs text-zinc-600">•</span>
-                      <span className="text-xs text-zinc-500">Downsell Offer</span>
-                    </div>
-                    <button
-                      onClick={handleRemoveDownsell}
-                      className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                  <label className="text-sm font-medium text-white block mb-2">Show this if they decline</label>
-                  <Select
-                    placeholder="Select downsell product..."
-                    value={downsellProduct}
-                    onValueChange={setDownsellProduct}
-                    size="md"
-                    items={downsellProducts}
-                    className="px-4 cursor-pointer"
-                    contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-orange-500 [&_svg]:hidden"
-                  />
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Your second chance to convert — usually a lower-priced alternative.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setHasDownsell(true)}
-              className="w-full border-2 border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl p-5 flex items-center justify-center gap-2 text-zinc-400 hover:text-zinc-300 transition-colors group cursor-pointer"
-            >
-              <svg className="w-5 h-5 text-zinc-500 group-hover:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span className="text-sm font-medium">Add Downsell Offer</span>
-            </button>
-          )}
-        </div>
-
-        {/* Storefront Editor Table */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="p-6 border-b border-zinc-800">
-            <h2 className="text-xl font-semibold text-white">Storefront Editor</h2>
-            <p className="text-zinc-400 text-sm mt-1">
-              Customize how your products appear in the storefront
-            </p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-zinc-900/50">
-                <tr className="border-b border-zinc-800">
-                  <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
-                    Product
-                  </th>
-                  <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
-                    Original Title
-                  </th>
-                  <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
-                    Storefront Display Name
-                  </th>
-                  <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
-                    Price
-                  </th>
-                  <th className="text-center text-sm font-medium text-zinc-400 px-6 py-4">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockProducts.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="h-12 w-12 bg-zinc-700 rounded-lg flex items-center justify-center">
-                        <svg
-                          className="w-6 h-6 text-zinc-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-white font-medium">{product.title}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-zinc-300">{product.storefrontName}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-green-500 font-medium">{product.price}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="p-2 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                          title="Edit"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          className="p-2 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
-                          title="Delete"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Edit Modal */}
-        {editModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setEditModalOpen(false)}
-            />
-
-            {/* Modal Content */}
-            <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
-              {/* Header */}
-              <div className="p-6 border-b border-zinc-800 flex-shrink-0">
-                <h2 className="text-xl font-semibold text-white">Edit Product Display</h2>
-                <p className="text-zinc-400 text-sm mt-1">
-                  Customize how this product appears in your storefront
-                </p>
-              </div>
-
-              {/* Body - Scrollable */}
-              <div className="p-6 space-y-6 overflow-y-auto flex-1">
-                {/* Whop Product Info (Read-only) */}
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                  <p className="text-xs text-zinc-500 uppercase tracking-wide mb-3">Whop Product Info</p>
-                  <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div>
-                      <label className="text-xs text-zinc-500">Product Name</label>
-                      <p className="text-white font-medium mt-1">{selectedProduct?.title}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-zinc-500">Product Price</label>
-                      <p className="text-green-500 font-medium mt-1">{selectedProduct?.price}</p>
-                      <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        selectedProduct?.paymentType === "recurring"
-                          ? "bg-purple-500/20 text-purple-400"
-                          : "bg-blue-500/20 text-blue-400"
-                      }`}>
-                        {selectedProduct?.paymentType === "recurring" ? (
-                          <>
-                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Recurring
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            One Time Purchase
-                          </>
-                        )}
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold">
+                        {step.number}
                       </span>
+                      <h3 className="text-white font-medium text-xs">{step.title}</h3>
                     </div>
+                    <p className="text-zinc-500 text-[10px] leading-tight">{step.description}</p>
                   </div>
-                  <div>
-                    <label className="text-xs text-zinc-500">Product Description</label>
-                    <p className="text-zinc-300 text-sm mt-1">{selectedProduct?.description}</p>
-                  </div>
-                </div>
 
-                {/* Divider */}
-                <div className="border-t border-zinc-800"></div>
-
-                {/* Image Upload */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Product Image</label>
-                  <div className="border-2 border-dashed border-zinc-700 rounded-xl p-8 text-center hover:border-zinc-500 transition-colors cursor-pointer bg-zinc-800/50">
-                    <div className="h-16 w-16 bg-zinc-700 rounded-lg mx-auto flex items-center justify-center mb-4">
-                      <svg
-                        className="w-8 h-8 text-zinc-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
+                  {/* Arrow connector */}
+                  {index < steps.length - 1 && (
+                    <div className="mx-3">
+                      <svg className="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
-                    <p className="text-zinc-400 text-sm">Click to upload or drag and drop</p>
-                    <p className="text-zinc-500 text-xs mt-1">PNG, JPG up to 5MB</p>
-                  </div>
+                  )}
                 </div>
-
-                {/* Display Name Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Storefront Display Name</label>
-                  <input
-                    type="text"
-                    placeholder="Enter display name..."
-                    value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Description Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Storefront Description</label>
-                  <textarea
-                    placeholder="Enter description..."
-                    value={editedDescription}
-                    onChange={(e) => setEditedDescription(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-zinc-800"></div>
-
-                {/* Show Discount Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-zinc-300">Show Discount</label>
-                    <p className="text-xs text-zinc-500 mt-0.5">Display a strikethrough original price</p>
-                  </div>
-                  <button
-                    onClick={() => setShowDiscount(!showDiscount)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                      showDiscount ? "bg-green-500" : "bg-zinc-600"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showDiscount ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Original Price Input (Conditional) */}
-                {showDiscount && (
-                  <div className="space-y-2 pl-0 border-l-2 border-green-500/30 animate-in fade-in duration-200">
-                    <div className="pl-4">
-                      <label className="text-sm font-medium text-zinc-300">Original Price</label>
-                      <p className="text-xs text-zinc-500 mt-0.5 mb-2">This will show as a strikethrough price</p>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">$</span>
-                        <input
-                          type="text"
-                          placeholder="99.00"
-                          value={originalPrice}
-                          onChange={(e) => setOriginalPrice(e.target.value)}
-                          className="w-full pl-8 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        />
-                      </div>
-                      <p className="text-[11px] text-zinc-600 mt-2 italic">
-                        This is for display purposes only and won&apos;t affect your actual product price on Whop.
-                      </p>
-                      {originalPrice && selectedProduct && (
-                        <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
-                          <p className="text-xs text-zinc-500 mb-1">Preview:</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-green-500 font-bold">{selectedProduct.price}</span>
-                            <span className="text-zinc-500 line-through text-sm">${originalPrice}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="p-6 border-t border-zinc-800 flex justify-end gap-3 flex-shrink-0">
-                <button
-                  onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white font-medium transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2.5 bg-green-600 hover:bg-green-500 rounded-lg text-white font-medium transition-colors cursor-pointer"
-                >
-                  Save Changes
-                </button>
-              </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Horizontal View Cards */}
+        <div className="space-y-3">
+          {views.map((view) => (
+            <Link
+              key={view.href}
+              href={view.href}
+              className="group flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-all hover:bg-zinc-900/80"
+            >
+              <div className={`flex-shrink-0 h-12 w-12 rounded-xl ${view.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <span className={view.iconColor}>{view.icon}</span>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h2 className="text-white font-semibold group-hover:text-green-400 transition-colors">
+                  {view.title}
+                </h2>
+                <p className="text-zinc-500 text-sm">
+                  {view.description}
+                </p>
+              </div>
+
+              <div className="flex-shrink-0 text-zinc-600 group-hover:text-green-400 transition-colors">
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-10 pt-6 border-t border-zinc-800">
+          <p className="text-zinc-600 text-sm">
+            Built with Next.js + @whop/frosted-ui
+          </p>
+        </div>
+        </div>
       </div>
     </div>
   );

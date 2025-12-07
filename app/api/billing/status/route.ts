@@ -6,18 +6,33 @@ import {
   getRecentTransactions,
   getRecentInvoices,
 } from "@/lib/db";
+import { verifyAuthFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/billing/status?userId=xxx OR ?whopUserId=xxx
  * Returns the current billing status for a user
+ *
+ * Authentication: Verifies x-whop-user-token header when available.
+ * Falls back to query params for development/testing.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const whopUserId = searchParams.get("whopUserId");
+    let userId = searchParams.get("userId");
+    let whopUserId = searchParams.get("whopUserId");
+
+    // Try to verify authentication from token
+    const authResult = await verifyAuthFromRequest(request);
+
+    if (authResult.authenticated && authResult.user) {
+      // Use authenticated user ID (more secure)
+      whopUserId = authResult.user.whopUserId;
+      if (authResult.user.dbUserId) {
+        userId = authResult.user.dbUserId;
+      }
+    }
 
     if (!userId && !whopUserId) {
       return NextResponse.json(

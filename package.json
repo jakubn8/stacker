@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "whop-proxy --command 'next dev --turbopack'",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -22,6 +22,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@whop-apps/dev-proxy": "^0.0.1-canary.117",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",

@@ -12,7 +12,7 @@ import {
 import { Timestamp } from "firebase-admin/firestore";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 minutes max for Vercel
+export const maxDuration = 900; // 15 minutes - Vercel Pro limit (handles ~300 users)
 
 // Minimum fee to charge (avoid tiny charges)
 const MINIMUM_FEE_TO_CHARGE = 1.0; // $1.00

@@ -13,8 +13,13 @@ import {
   updateUserNextBillingDate,
   updateBillingStatus,
   incrementTotalRevenue,
+  canRunUpsellFlow,
+  recordUpsellConversion,
+  hasNotificationBeenSent,
+  recordSentNotification,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
+import { generateOfferToken } from "@/lib/offer-tokens";
 
 // Disable body parsing - we need raw body for signature verification
 export const dynamic = "force-dynamic";
@@ -53,6 +58,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         await handleSetupIntentSucceeded(webhookData.data as unknown as Record<string, unknown>);
         break;
 
+      case "membership.activated":
+        await handleMembershipActivated(webhookData.data as unknown as Record<string, unknown>);
+        break;
+
       default:
         console.log("Unhandled webhook type:", webhookData.type);
     }
@@ -69,7 +78,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 /**
  * Handle successful payments
- * - If it's an upsell sale on a community owner's store, track it for billing
+ * - Track ALL sales from Stacker-enabled companies (for 5% fee)
  * - If it's our Stacker billing charge that succeeded, mark invoice as paid
  */
 async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<void> {
@@ -117,33 +126,36 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     return;
   }
 
-  // Check if this product is a Stacker upsell
-  const isUpsell = await isStackerUpsell(productId);
-  if (!isUpsell) {
-    console.log("Not a Stacker upsell, skipping:", productId);
-    return;
-  }
-
-  // Get the product details
-  const product = await getStackerProduct(productId);
-  if (!product) {
-    console.log("Product not found in Stacker:", productId);
-    return;
-  }
-
-  // Get the user (community owner) who owns this product
+  // Check if this company belongs to a Stacker user
+  // If yes, we track ALL their sales for our 5% fee
   const user = await getUserByWhopCompanyId(companyId);
   if (!user) {
-    console.log("User not found for company:", companyId);
+    console.log("Company not registered with Stacker, skipping:", companyId);
     return;
   }
 
-  // Create transaction record
+  // Get product name - first try our DB, then fall back to Whop API
+  let productName = "Product";
+  const stackerProduct = await getStackerProduct(productId);
+  if (stackerProduct) {
+    productName = stackerProduct.name;
+  } else {
+    // Try to get product name from Whop
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const whopProduct = await (whopsdk.products as any).retrieve({ id: productId });
+      productName = whopProduct?.title || "Product";
+    } catch (err) {
+      console.log("Could not fetch product name from Whop:", err);
+    }
+  }
+
+  // Create transaction record for this sale
   const transaction = await createTransaction({
     userId: user.id,
     whopPaymentId: paymentId,
     productId,
-    productName: product.name,
+    productName,
     saleAmount: amount / 100, // Convert cents to dollars
     currency,
   });
@@ -151,7 +163,13 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   // Increment total revenue for this user (amount is already in cents)
   await incrementTotalRevenue(user.id, amount);
 
-  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents");
+  // Check if this was an upsell/downsell for conversion tracking
+  const isUpsell = await isStackerUpsell(productId);
+  if (isUpsell) {
+    await recordUpsellConversion(user.id, amount);
+  }
+
+  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents", isUpsell ? "(upsell)" : "(storefront)");
 }
 
 /**
@@ -199,4 +217,146 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
   // Update user with payment method
   await updateUserPaymentMethod(userId, paymentMethodId);
   console.log("Payment method saved for user:", userId);
+}
+
+/**
+ * Handle membership.activated - when a user gains access to a product
+ * This is where we check if the product is a trigger product and send the upsell notification
+ */
+async function handleMembershipActivated(data: Record<string, unknown>): Promise<void> {
+  const membershipId = data.id as string;
+  const productId = data.product_id as string;
+  const companyId = data.company_id as string;
+  const visitorId = data.user_id as string;
+  const userEmail = (data.email as string) || null;
+  // member_id is needed for one-click payments
+  const memberId = (data.member_id as string) || membershipId;
+
+  console.log("Membership activated:", { membershipId, memberId, productId, companyId, visitorId });
+
+  // Skip if this is our Stacker company
+  if (companyId === STACKER_COMPANY_ID) {
+    return;
+  }
+
+  // Get the community owner
+  const owner = await getUserByWhopCompanyId(companyId);
+  if (!owner) {
+    console.log("Owner not found for company:", companyId);
+    return;
+  }
+
+  // Check if upsell flow can run
+  const flowCheck = await canRunUpsellFlow(owner.id);
+  if (!flowCheck.allowed) {
+    console.log("Upsell flow not available:", flowCheck.reason);
+    return;
+  }
+
+  // Check if this is the trigger product
+  if (owner.flowConfig.triggerProductId !== productId) {
+    console.log("Not the trigger product, skipping");
+    return;
+  }
+
+  // Check if notifications are enabled
+  const notificationSettings = owner.notificationSettings || {
+    title: "🎁 Wait! Your order isn't complete...",
+    content: "You unlocked an exclusive offer! Tap to claim it now.",
+    enabled: true,
+  };
+
+  if (!notificationSettings.enabled) {
+    console.log("Notifications disabled for this owner, skipping");
+    return;
+  }
+
+  // Check if we've already sent a notification to this user for this trigger
+  const alreadySent = await hasNotificationBeenSent(owner.id, visitorId, productId);
+  if (alreadySent) {
+    console.log("Notification already sent to user for this trigger, skipping:", visitorId);
+    return;
+  }
+
+  // Generate the offer token for the deep link (includes member_id for one-click payments)
+  const token = generateOfferToken({
+    buyerUserId: visitorId,
+    buyerEmail: userEmail,
+    buyerMemberId: memberId,
+    companyId: companyId,
+    triggerProductId: productId,
+  });
+
+  // Send push notification via Whop API
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (whopsdk.notifications as any).create({
+      user_ids: [visitorId],
+      title: notificationSettings.title,
+      content: notificationSettings.content,
+      // Deep link to the offer page - this opens inside the Whop app
+      rest_path: `/experience/offer?token=${encodeURIComponent(token)}`,
+    });
+
+    // Record that we sent this notification to prevent duplicates
+    await recordSentNotification(owner.id, visitorId, productId);
+
+    console.log("Upsell notification sent to user:", visitorId);
+  } catch (error) {
+    console.error("Failed to send upsell notification:", error);
+  }
+}
+
+/**
+ * Handle stacker upsell/downsell purchase
+ * Called when we detect a purchase of a stacker upsell product
+ */
+export async function handleStackerUpsellPurchase(data: {
+  paymentId: string;
+  companyId: string;
+  productId: string;
+  amountCents: number;
+  currency: string;
+  buyerUserId: string;
+  metadata?: Record<string, string>;
+}): Promise<void> {
+  const { paymentId, companyId, productId, amountCents, currency, metadata } = data;
+
+  // Check if this was from a Stacker upsell flow
+  if (!metadata?.stacker_offer_type) {
+    return;
+  }
+
+  // Get the community owner
+  const owner = await getUserByWhopCompanyId(companyId);
+  if (!owner) {
+    console.log("Owner not found for stacker upsell:", companyId);
+    return;
+  }
+
+  // Get product details
+  const product = await getStackerProduct(productId);
+  const productName = product?.name || "Upsell Product";
+
+  // Record the conversion for analytics
+  await recordUpsellConversion(owner.id, amountCents);
+
+  // Create transaction for billing
+  await createTransaction({
+    userId: owner.id,
+    whopPaymentId: paymentId,
+    productId,
+    productName,
+    saleAmount: amountCents / 100,
+    currency,
+  });
+
+  // Update total revenue
+  await incrementTotalRevenue(owner.id, amountCents);
+
+  console.log("Stacker upsell recorded:", {
+    ownerUserId: owner.id,
+    offerType: metadata.stacker_offer_type,
+    amount: amountCents,
+  });
 }
