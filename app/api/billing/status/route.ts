@@ -70,6 +70,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       paidAt: i.paidAt?.toDate().toISOString() || null,
     }));
 
+    // Calculate grace period info if applicable
+    let gracePeriodInfo = null;
+    if (user.billingStatus === "grace_period" && user.gracePeriodEndsAt) {
+      const now = new Date();
+      const gracePeriodEnd = user.gracePeriodEndsAt.toDate();
+      const hoursRemaining = Math.max(0, (gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+      gracePeriodInfo = {
+        paymentFailedAt: user.paymentFailedAt?.toDate().toISOString() || null,
+        endsAt: gracePeriodEnd.toISOString(),
+        hoursRemaining: Math.round(hoursRemaining * 10) / 10,
+        isExpired: hoursRemaining <= 0,
+        lastFailedInvoiceId: user.lastFailedInvoiceId,
+      };
+    }
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -77,11 +93,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         email: user.email,
       },
       billing: {
+        status: user.billingStatus,
         pendingFee: summary.pendingFee,
         pendingTransactionCount: summary.pendingTransactionCount,
         nextBillingDate: summary.nextBillingDate?.toISOString() || null,
         daysTillBilling: summary.daysTillBilling,
+        totalRevenueGeneratedCents: user.totalRevenueGeneratedCents,
       },
+      gracePeriod: gracePeriodInfo,
       recentTransactions: formattedTransactions,
       recentInvoices: formattedInvoices,
     });
