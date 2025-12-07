@@ -3,8 +3,8 @@ import Link from "next/link";
 export default function Home() {
   const views = [
     {
-      title: "Owner Dashboard",
-      description: "Configure upsells and manage your storefront display settings",
+      title: "Dashboard & Analytics",
+      description: "View your analytics, configure upsells and manage your storefront display",
       href: "/dashboard/demo-company",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,8 +16,8 @@ export default function Home() {
       iconColor: "text-purple-400",
     },
     {
-      title: "Intercept Modal",
-      description: "Post-purchase upsell page with one-time offer",
+      title: "Post-Purchase Offer Page",
+      description: "Preview how users will see your upsells",
       href: "/intercept",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,7 +29,7 @@ export default function Home() {
     },
     {
       title: "Storefront Grid",
-      description: "Browse and purchase products in the shop experience",
+      description: "Preview your storefront experience",
       href: "/experience",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,7 +51,7 @@ export default function Home() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-green-400 text-sm font-medium">UI Skeleton Ready</span>
+            <span className="text-green-400 text-sm font-medium">Add 20% to your monthly recurring revenue</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Stacker
