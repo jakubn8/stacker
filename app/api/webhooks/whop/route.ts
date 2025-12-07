@@ -8,7 +8,7 @@ import {
   isStackerUpsell,
   getStackerProduct,
   updateInvoiceStatus,
-  getInvoice,
+  getInvoiceByWhopPaymentId,
   markTransactionsAsInvoiced,
   updateUserNextBillingDate,
 } from "@/lib/db";
@@ -82,30 +82,25 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   // Check if this is our Stacker billing charge (paid to us)
   if (companyId === STACKER_COMPANY_ID) {
     // This is a billing payment TO us
-    // Find the invoice by metadata or payment reference
-    const metadata = data.metadata as Record<string, string> | undefined;
-    const invoiceId = metadata?.invoiceId;
+    // Find the invoice by the stored whopPaymentId
+    const invoice = await getInvoiceByWhopPaymentId(paymentId);
 
-    if (invoiceId) {
-      const invoice = await getInvoice(invoiceId);
-      if (invoice && invoice.status === "processing") {
-        // Mark invoice as paid
-        await updateInvoiceStatus(invoiceId, "paid", {
-          whopPaymentId: paymentId,
-          paidAt: Timestamp.now(),
-        });
+    if (invoice && invoice.status === "processing") {
+      // Mark invoice as paid
+      await updateInvoiceStatus(invoice.id, "paid", {
+        paidAt: Timestamp.now(),
+      });
 
-        // Mark all transactions as invoiced
-        await markTransactionsAsInvoiced(invoice.transactionIds, invoiceId);
+      // Mark all transactions as invoiced
+      await markTransactionsAsInvoiced(invoice.transactionIds, invoice.id);
 
-        // Update user's next billing date
-        const sevenDaysFromNow = Timestamp.fromDate(
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        );
-        await updateUserNextBillingDate(invoice.userId, sevenDaysFromNow);
+      // Update user's next billing date
+      const sevenDaysFromNow = Timestamp.fromDate(
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      );
+      await updateUserNextBillingDate(invoice.userId, sevenDaysFromNow);
 
-        console.log("Invoice marked as paid:", invoiceId);
-      }
+      console.log("Invoice marked as paid:", invoice.id);
     }
     return;
   }
@@ -167,18 +162,14 @@ async function handlePaymentFailed(data: Record<string, unknown>): Promise<void>
     return;
   }
 
-  // Find the invoice by metadata
-  const metadata = data.metadata as Record<string, string> | undefined;
-  const invoiceId = metadata?.invoiceId;
+  // Find the invoice by the stored whopPaymentId
+  const invoice = await getInvoiceByWhopPaymentId(paymentId);
 
-  if (invoiceId) {
-    const invoice = await getInvoice(invoiceId);
-    if (invoice && invoice.status === "processing") {
-      await updateInvoiceStatus(invoiceId, "failed", {
-        failureReason: failureMessage,
-      });
-      console.log("Invoice marked as failed:", invoiceId, failureMessage);
-    }
+  if (invoice && invoice.status === "processing") {
+    await updateInvoiceStatus(invoice.id, "failed", {
+      failureReason: failureMessage,
+    });
+    console.log("Invoice marked as failed:", invoice.id, failureMessage);
   }
 }
 

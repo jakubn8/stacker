@@ -339,6 +339,18 @@ export async function getUsersDueForBilling(): Promise<User[]> {
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
 }
 
+export async function getInvoiceByWhopPaymentId(whopPaymentId: string): Promise<Invoice | null> {
+  const snapshot = await db
+    .collection("invoices")
+    .where("whopPaymentId", "==", whopPaymentId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() } as Invoice;
+}
+
 // ============================================
 // PRODUCT FUNCTIONS (for tracking upsells)
 // ============================================
