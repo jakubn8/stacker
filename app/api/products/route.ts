@@ -157,7 +157,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           description: product.headline || null,
           headline: product.headline,
           route: product.route,
-          imageUrl: null,
+          imageUrl: product.images?.[0]?.source_url || null,
           price,
           currency,
           planType,
