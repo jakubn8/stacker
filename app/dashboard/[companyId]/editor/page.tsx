@@ -656,21 +656,37 @@ export default function EditorPage() {
 
                         <div className="bg-zinc-800/50 border border-zinc-700 rounded-md p-1.5 mb-1.5">
                           {upsellProductData ? (
-                            <div className="flex gap-1.5">
-                              <div className="flex-shrink-0">
-                                {upsellProductData.imageUrl ? (
-                                  <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="h-8 w-14 rounded-md object-cover border border-zinc-700" />
-                                ) : (
-                                  <div className="h-8 w-14 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-md flex items-center justify-center border border-zinc-700">
-                                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                  </div>
+                            <div className="space-y-1">
+                              {/* Image */}
+                              {upsellProductData.imageUrl ? (
+                                <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full h-10 rounded-md object-cover border border-zinc-700" />
+                              ) : (
+                                <div className="w-full h-10 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-md flex items-center justify-center border border-zinc-700">
+                                  <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* Title & Description */}
+                              <div>
+                                <h2 className="text-[9px] font-semibold text-white">{upsellProductData.title}</h2>
+                                {upsellProductDescription && (
+                                  <p className="text-zinc-400 text-[7px] line-clamp-1">{upsellProductDescription}</p>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h2 className="text-[9px] font-semibold text-white">{upsellProductData.title}</h2>
-                                <span className="text-[10px] font-bold text-green-500">{formatPrice(upsellProductData.price, upsellProductData.currency)}</span>
+                              {/* Price & Pill */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                  {upsellShowDiscountPrice && upsellDiscountPrice > 0 && (
+                                    <span className="text-[8px] text-zinc-500 line-through">{formatPrice(upsellDiscountPrice, upsellProductData.currency)}</span>
+                                  )}
+                                  <span className="text-[10px] font-bold text-green-500">{formatPrice(upsellProductData.price, upsellProductData.currency)}</span>
+                                </div>
+                                <span className={`text-[6px] font-medium px-1 py-0.5 rounded-full ${
+                                  upsellProductData.planType === "renewal" ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                                }`}>
+                                  {upsellProductData.planType === "renewal" ? "Monthly" : "One Time"}
+                                </span>
                               </div>
                             </div>
                           ) : (
@@ -741,20 +757,29 @@ export default function EditorPage() {
 
                         <div className="bg-zinc-800/50 border border-orange-500/20 rounded-md p-1.5 mb-1.5">
                           {downsellProductData ? (
-                            <div className="flex items-center gap-1.5">
-                              <div className="flex-shrink-0">
-                                {downsellProductData.imageUrl ? (
-                                  <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="h-7 w-12 rounded-md object-cover border border-orange-500/30" />
-                                ) : (
-                                  <div className="h-7 w-12 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-md flex items-center justify-center border border-orange-500/30">
-                                    <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                  </div>
+                            <div className="space-y-1">
+                              {/* Image */}
+                              {downsellProductData.imageUrl ? (
+                                <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full h-9 rounded-md object-cover border border-orange-500/30" />
+                              ) : (
+                                <div className="w-full h-9 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-md flex items-center justify-center border border-orange-500/30">
+                                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* Title & Description */}
+                              <div>
+                                <h2 className="text-[9px] font-semibold text-white">{downsellProductData.title}</h2>
+                                {downsellProductDescription && (
+                                  <p className="text-zinc-400 text-[7px] line-clamp-1">{downsellProductDescription}</p>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h2 className="text-[9px] font-semibold text-white">{downsellProductData.title}</h2>
+                              {/* Price */}
+                              <div className="flex items-center gap-1">
+                                {downsellShowDiscountPrice && downsellDiscountPrice > 0 && (
+                                  <span className="text-[8px] text-zinc-500 line-through">{formatPrice(downsellDiscountPrice, downsellProductData.currency)}</span>
+                                )}
                                 <span className="text-[11px] font-bold text-orange-400">{formatPrice(downsellProductData.price, downsellProductData.currency)}</span>
                               </div>
                             </div>
@@ -906,12 +931,12 @@ export default function EditorPage() {
               value={productDescription}
               onChange={(e) => setProductDescription(e.target.value)}
               placeholder="Enter a short description of the product..."
-              rows={3}
-              maxLength={200}
+              rows={2}
+              maxLength={80}
               className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
             />
             <p className="text-xs text-zinc-500">
-              Custom description shown on the offer card. Max 200 characters. ({productDescription.length}/200)
+              Custom description shown on the offer card. Max 80 characters. ({productDescription.length}/80)
             </p>
           </div>
 
