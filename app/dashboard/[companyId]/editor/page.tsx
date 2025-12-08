@@ -656,7 +656,7 @@ export default function EditorPage() {
 
                         <div className="bg-zinc-800/50 border border-zinc-700 rounded-md p-1.5 mb-1.5">
                           {upsellProductData ? (
-                            <div className="space-y-0.5">
+                            <div>
                               {/* Image */}
                               {upsellProductData.imageUrl ? (
                                 <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full aspect-video rounded-md object-cover border border-zinc-700" />
@@ -668,14 +668,12 @@ export default function EditorPage() {
                                 </div>
                               )}
                               {/* Title & Description */}
-                              <div className="pt-0.5">
-                                <h2 className="text-[9px] font-semibold text-white">{upsellProductData.title}</h2>
-                                {upsellProductDescription && (
-                                  <p className="text-zinc-400 text-[7px] line-clamp-1">{upsellProductDescription}</p>
-                                )}
-                              </div>
+                              <h2 className="text-[9px] font-semibold text-white mt-1 leading-tight">{upsellProductData.title}</h2>
+                              {upsellProductDescription && (
+                                <p className="text-zinc-400 text-[7px] leading-tight line-clamp-1">{upsellProductDescription}</p>
+                              )}
                               {/* Price & Pill */}
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between mt-1">
                                 <div className="flex items-center gap-1">
                                   {upsellShowDiscountPrice && upsellDiscountPrice > 0 && (
                                     <span className="text-[8px] text-zinc-500 line-through">{formatPrice(upsellDiscountPrice, upsellProductData.currency)}</span>
@@ -757,7 +755,7 @@ export default function EditorPage() {
 
                         <div className="bg-zinc-800/50 border border-orange-500/20 rounded-md p-1.5 mb-1.5">
                           {downsellProductData ? (
-                            <div className="space-y-0.5">
+                            <div>
                               {/* Image */}
                               {downsellProductData.imageUrl ? (
                                 <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full aspect-video rounded-md object-cover border border-orange-500/30" />
@@ -769,14 +767,12 @@ export default function EditorPage() {
                                 </div>
                               )}
                               {/* Title & Description */}
-                              <div className="pt-0.5">
-                                <h2 className="text-[9px] font-semibold text-white">{downsellProductData.title}</h2>
-                                {downsellProductDescription && (
-                                  <p className="text-zinc-400 text-[7px] line-clamp-1">{downsellProductDescription}</p>
-                                )}
-                              </div>
+                              <h2 className="text-[9px] font-semibold text-white mt-1 leading-tight">{downsellProductData.title}</h2>
+                              {downsellProductDescription && (
+                                <p className="text-zinc-400 text-[7px] leading-tight line-clamp-1">{downsellProductDescription}</p>
+                              )}
                               {/* Price */}
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 mt-1">
                                 {downsellShowDiscountPrice && downsellDiscountPrice > 0 && (
                                   <span className="text-[8px] text-zinc-500 line-through">{formatPrice(downsellDiscountPrice, downsellProductData.currency)}</span>
                                 )}
