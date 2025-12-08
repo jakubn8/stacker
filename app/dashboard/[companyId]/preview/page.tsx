@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@whop/frosted-ui";
+import Link from "next/link";
 
 interface Product {
   id: string;
@@ -17,65 +18,39 @@ interface Product {
   checkoutUrl: string | null;
 }
 
-export default function ExperiencePage() {
+export default function StorePreviewPage() {
   const params = useParams();
-  const experienceId = params.experienceId as string;
+  const companyId = params.companyId as string;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [companyId, setCompanyId] = useState<string | null>(null);
 
-  // Fetch experience data and products
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProducts = async () => {
       try {
         setLoading(true);
-        // Fetch experience info to get the company ID
-        const expResponse = await fetch(`/api/experience/${experienceId}`);
-
-        if (!expResponse.ok) {
-          if (expResponse.status === 403) {
-            setError("You don't have access to this storefront");
-            return;
-          }
-          throw new Error("Failed to load storefront");
-        }
-
-        const expData = await expResponse.json();
-        setCompanyId(expData.companyId);
-
-        // Fetch products for this company
-        const productsResponse = await fetch(`/api/products?companyId=${expData.companyId}`);
-        if (productsResponse.ok) {
-          const productsData = await productsResponse.json();
-          setProducts(productsData.products || []);
+        const response = await fetch(`/api/products?companyId=${companyId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProducts(data.products || []);
         }
       } catch (err) {
-        console.error("Error loading experience:", err);
-        setError("Failed to load storefront");
+        console.error("Error loading products:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (experienceId) {
-      fetchData();
+    if (companyId) {
+      fetchProducts();
     }
-  }, [experienceId]);
+  }, [companyId]);
 
   const formatPrice = (price: number, currency: string = "usd") => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency.toUpperCase(),
     }).format(price);
-  };
-
-  const handlePurchase = (product: Product) => {
-    // Redirect to Whop checkout for this product
-    if (product.checkoutUrl) {
-      window.location.href = product.checkoutUrl;
-    }
   };
 
   if (loading) {
@@ -86,25 +61,32 @@ export default function ExperiencePage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="h-16 w-16 bg-red-500/10 rounded-full mx-auto flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-zinc-400">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-zinc-950 p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Back Link */}
+        <Link
+          href={`/dashboard/${companyId}`}
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </Link>
+
+        {/* Preview Banner */}
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 mb-6">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span className="text-yellow-500 text-sm font-medium">Preview Mode</span>
+            <span className="text-yellow-500/70 text-sm">— This is how your store looks to customers</span>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-2">Available Products</h1>
@@ -120,6 +102,7 @@ export default function ExperiencePage() {
               </svg>
             </div>
             <p className="text-zinc-400">No products available</p>
+            <p className="text-zinc-500 text-sm mt-2">Products will appear here once synced from Whop</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
@@ -154,25 +137,19 @@ export default function ExperiencePage() {
                         <p className="text-zinc-500 text-sm mt-1 line-clamp-2">{product.description}</p>
                       )}
                     </div>
-                    {product.owned ? (
-                      <span className="px-3 py-1.5 bg-zinc-800 text-zinc-400 text-sm font-medium rounded-lg flex-shrink-0">
-                        Owned
-                      </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="elevated"
-                        onClick={() => handlePurchase(product)}
-                        className="px-4 py-1.5 flex-shrink-0"
-                      >
-                        {product.price === 0 ? "Free" : formatPrice(product.price, product.currency)}
-                        {product.planType === "renewal" && product.billingPeriod && product.price > 0 && (
-                          <span className="text-white/70 ml-1">
-                            /{product.billingPeriod === 30 ? "mo" : product.billingPeriod === 365 ? "yr" : `${product.billingPeriod}d`}
-                          </span>
-                        )}
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="elevated"
+                      disabled
+                      className="px-4 py-1.5 flex-shrink-0 opacity-50 cursor-not-allowed"
+                    >
+                      {product.price === 0 ? "Free" : formatPrice(product.price, product.currency)}
+                      {product.planType === "renewal" && product.billingPeriod && product.price > 0 && (
+                        <span className="text-white/70 ml-1">
+                          /{product.billingPeriod === 30 ? "mo" : product.billingPeriod === 365 ? "yr" : `${product.billingPeriod}d`}
+                        </span>
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -97,6 +97,9 @@ export default function DashboardPage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [notificationSaving, setNotificationSaving] = useState(false);
 
+  // Payment method required modal
+  const [showPaymentRequiredModal, setShowPaymentRequiredModal] = useState(false);
+
   // Hidden products (stored locally, will be persisted to DB)
   const [hiddenProductIds, setHiddenProductIds] = useState<Set<string>>(new Set());
 
@@ -322,7 +325,7 @@ export default function DashboardPage() {
   const handleSetIsActive = (active: boolean) => {
     // Can't activate without a payment method
     if (active && !billingStatus?.user?.paymentMethodConnected) {
-      alert("Please connect a payment method before activating upsells.");
+      setShowPaymentRequiredModal(true);
       return;
     }
     setIsActive(active);
@@ -526,6 +529,63 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      {/* Payment Required Modal */}
+      {showPaymentRequiredModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowPaymentRequiredModal(false)}
+          />
+          {/* Modal */}
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            {/* Close button */}
+            <button
+              onClick={() => setShowPaymentRequiredModal(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Icon */}
+            <div className="h-14 w-14 bg-orange-500/10 rounded-full mx-auto flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+
+            {/* Content */}
+            <h3 className="text-lg font-semibold text-white text-center mb-2">
+              Payment Method Required
+            </h3>
+            <p className="text-zinc-400 text-sm text-center mb-6">
+              Please connect a payment method before activating upsells. We only charge 5% on successful upsells.
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPaymentRequiredModal(false)}
+                className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowPaymentRequiredModal(false);
+                  handleConnectPayment();
+                }}
+                className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 rounded-lg text-white font-medium transition-colors cursor-pointer"
+              >
+                Connect Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DashboardNav companyId={companyId} />
       <div className="p-6 md:p-8">
         <div className="max-w-6xl mx-auto space-y-8">
