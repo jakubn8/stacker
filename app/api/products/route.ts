@@ -86,6 +86,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       for await (const product of whopsdk.products.list({
         company_id: companyId,
       })) {
+        // Skip the Stacker app product itself
+        if (product.title.toLowerCase() === "stacker") {
+          continue;
+        }
+
         // Get plans for this product to get pricing
         let price = 0;
         let currency = "usd";
@@ -99,14 +104,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             company_id: companyId,
             product_ids: [product.id],
           })) {
-            // Use the first visible plan's pricing (already in dollars)
-            price = plan.initial_price;
             currency = plan.currency || "usd";
             const pType = plan.plan_type as string;
             planType = pType === "renewal" ? "renewal" :
                        pType === "free" ? "free" : "one_time";
             billingPeriod = plan.billing_period;
             planId = plan.id;
+
+            // For recurring plans, use renewal_price if it exists
+            // For one-time plans, use initial_price
+            if (planType === "renewal" && plan.renewal_price !== undefined && plan.renewal_price !== null) {
+              price = plan.renewal_price;
+            } else {
+              price = plan.initial_price;
+            }
+
             break; // Just use the first plan
           }
         } catch (planError) {
