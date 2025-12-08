@@ -160,8 +160,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
               price = plan.initial_price;
             }
 
-            console.log(`Plan ${plan.id}: type=${planType}, initial=${plan.initial_price}, renewal=${plan.renewal_price}, using=${price}`);
-
             break; // Just use the first plan
           }
         } catch (planError) {

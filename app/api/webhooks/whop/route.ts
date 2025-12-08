@@ -82,13 +82,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * - If it's our Stacker billing charge that succeeded, mark invoice as paid
  */
 async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<void> {
-  const paymentId = data.id as string;
-  const companyId = data.company_id as string;
-  const productId = data.product_id as string;
-  const amount = data.total as number; // Amount in cents
+  // Log full payload to debug field names
+  console.log("Payment succeeded full payload:", JSON.stringify(data, null, 2));
+
+  // Handle nested objects - Whop may send product.id instead of product_id
+  const product = data.product as { id?: string } | undefined;
+  const company = data.company as { id?: string } | undefined;
+
+  const paymentId = (data.id as string) || "";
+  const companyId = (data.company_id as string) || company?.id || "";
+  const productId = (data.product_id as string) || product?.id || "";
+  const amount = (data.total as number) || 0; // Amount in cents
   const currency = (data.currency as string) || "usd";
 
-  console.log("Payment succeeded:", { paymentId, companyId, productId, amount });
+  console.log("Payment succeeded parsed:", { paymentId, companyId, productId, amount });
+
+  // Validate required fields
+  if (!paymentId || !companyId) {
+    console.error("Missing required fields in payment webhook:", { paymentId, companyId });
+    return;
+  }
 
   // Check if this is our Stacker billing charge (paid to us)
   if (companyId === STACKER_COMPANY_ID) {
@@ -234,15 +247,29 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
  * This is where we check if the product is a trigger product and send the upsell notification
  */
 async function handleMembershipActivated(data: Record<string, unknown>): Promise<void> {
-  const membershipId = data.id as string;
-  const productId = data.product_id as string;
-  const companyId = data.company_id as string;
-  const visitorId = data.user_id as string;
-  const userEmail = (data.email as string) || null;
+  // Log full payload to debug field names
+  console.log("Membership activated full payload:", JSON.stringify(data, null, 2));
+
+  // Handle nested objects - Whop may send product.id instead of product_id
+  const product = data.product as { id?: string } | undefined;
+  const company = data.company as { id?: string } | undefined;
+  const user = data.user as { id?: string; email?: string } | undefined;
+
+  const membershipId = (data.id as string) || "";
+  const productId = (data.product_id as string) || product?.id || "";
+  const companyId = (data.company_id as string) || company?.id || "";
+  const visitorId = (data.user_id as string) || user?.id || "";
+  const userEmail = (data.email as string) || user?.email || null;
   // member_id is needed for one-click payments
   const memberId = (data.member_id as string) || membershipId;
 
-  console.log("Membership activated:", { membershipId, memberId, productId, companyId, visitorId });
+  console.log("Membership activated parsed:", { membershipId, memberId, productId, companyId, visitorId });
+
+  // Validate required fields
+  if (!companyId || !productId || !visitorId) {
+    console.error("Missing required fields in membership webhook:", { companyId, productId, visitorId });
+    return;
+  }
 
   // Skip if this is our Stacker company
   if (companyId === STACKER_COMPANY_ID) {
