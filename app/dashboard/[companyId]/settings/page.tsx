@@ -193,8 +193,8 @@ export default function DashboardPage() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // Fetch products from Whop - use auth context company ID, or URL param if it's a real biz_xxx ID
-  const realCompanyId = authUser?.whopCompanyId || (companyId.startsWith("biz_") ? companyId : null);
+  // Fetch products from Whop - prioritize URL param if it's a valid biz_xxx ID
+  const realCompanyId = companyId.startsWith("biz_") ? companyId : (authUser?.whopCompanyId?.startsWith("biz_") ? authUser.whopCompanyId : null);
 
   const fetchProducts = useCallback(async () => {
     if (!realCompanyId) {
@@ -1068,7 +1068,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <Link
-                href="/dashboard/demo-company/editor"
+                href={`/dashboard/${companyId}/editor`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
