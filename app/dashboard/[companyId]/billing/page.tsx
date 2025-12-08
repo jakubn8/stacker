@@ -48,7 +48,7 @@ export default function BillingPortalPage() {
   const companyId = params.companyId as string;
   const { user: authUser } = useAuth();
 
-  const whopUserId = authUser?.whopUserId || `demo_user_${companyId}`;
+  const whopUserId = authUser?.whopUserId || "";
 
   const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);

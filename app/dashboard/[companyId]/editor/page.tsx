@@ -39,9 +39,9 @@ export default function EditorPage() {
   const params = useParams();
   const companyId = params.companyId as string;
   const { user: authUser } = useAuth();
-  const whopUserId = authUser?.whopUserId || `demo_user_${companyId}`;
-  // Use the real company ID from auth context for Whop API calls, or URL param if it's a real biz_xxx ID
-  const realCompanyId = authUser?.whopCompanyId || (companyId.startsWith("biz_") ? companyId : null);
+  const whopUserId = authUser?.whopUserId || "";
+  // Use the real company ID - prioritize URL param if it's a valid biz_xxx ID
+  const realCompanyId = companyId.startsWith("biz_") ? companyId : (authUser?.whopCompanyId?.startsWith("biz_") ? authUser.whopCompanyId : null);
 
   // Loading and saving state
   const [isLoading, setIsLoading] = useState(true);

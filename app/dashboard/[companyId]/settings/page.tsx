@@ -79,8 +79,8 @@ export default function DashboardPage() {
   const companyId = params.companyId as string;
   const { user: authUser, isAuthenticated } = useAuth();
 
-  // Get the whopUserId from auth context, fall back to demo for development
-  const whopUserId = authUser?.whopUserId || `demo_user_${companyId}`;
+  // Get the whopUserId from auth context
+  const whopUserId = authUser?.whopUserId || "";
 
   // Flow configuration state
   const [isActive, setIsActive] = useState(false);
