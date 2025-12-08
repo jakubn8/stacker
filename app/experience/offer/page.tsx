@@ -28,6 +28,7 @@ interface OfferSettings {
   reviewStars: number;
   showDiscountPrice?: boolean;
   discountPrice?: number;
+  productDescription?: string;
 }
 
 interface OfferData {
@@ -202,28 +203,31 @@ function OfferPageContent() {
 
             {/* Product Display */}
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 sm:p-4 mb-4">
-              <div className="flex gap-3 sm:gap-4">
-                <div className="flex-shrink-0">
-                  {activeOffer.product.imageUrl ? (
-                    <img
-                      src={activeOffer.product.imageUrl}
-                      alt={activeOffer.product.name}
-                      className="h-14 w-24 sm:h-16 sm:w-28 rounded-xl object-cover border border-zinc-700"
-                    />
-                  ) : (
-                    <div className="h-14 w-24 sm:h-16 sm:w-28 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
+              <div className="space-y-3">
+                {/* Product Image */}
+                {activeOffer.product.imageUrl ? (
+                  <img
+                    src={activeOffer.product.imageUrl}
+                    alt={activeOffer.product.name}
+                    className="w-full h-24 sm:h-32 rounded-xl object-cover border border-zinc-700"
+                  />
+                ) : (
+                  <div className="w-full h-24 sm:h-32 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
+                    <svg className="w-10 h-10 sm:w-12 sm:h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                )}
+                {/* Product Info */}
+                <div>
+                  <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
+                  {activeOffer.settings.productDescription && (
+                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
-                  {activeOffer.product.description && (
-                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-2">{activeOffer.product.description}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
+                {/* Price and Billing */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
                       <span className="text-sm sm:text-base text-zinc-500 line-through">
                         {formatPrice(activeOffer.settings.discountPrice)}
@@ -233,27 +237,25 @@ function OfferPageContent() {
                       {formatPrice(activeOffer.plan.price)}
                     </span>
                   </div>
-                  <div className="mt-1.5">
-                    <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full ${
-                      activeOffer.plan.isRecurring ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
-                    }`}>
-                      {activeOffer.plan.isRecurring ? (
-                        <>
-                          <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          {activeOffer.plan.billingPeriod || "Recurring"}
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          One Time Purchase
-                        </>
-                      )}
-                    </span>
-                  </div>
+                  <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full ${
+                    activeOffer.plan.isRecurring ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                  }`}>
+                    {activeOffer.plan.isRecurring ? (
+                      <>
+                        <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        {activeOffer.plan.billingPeriod || "Recurring"}
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        One Time
+                      </>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
@@ -355,37 +357,38 @@ function OfferPageContent() {
 
             {/* Product Display */}
             <div className="bg-zinc-800/50 border border-orange-500/20 rounded-xl p-3 sm:p-4 mb-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex-shrink-0">
-                  {activeOffer.product.imageUrl ? (
-                    <img
-                      src={activeOffer.product.imageUrl}
-                      alt={activeOffer.product.name}
-                      className="h-12 w-20 sm:h-14 sm:w-24 rounded-xl object-cover border border-orange-500/30"
-                    />
-                  ) : (
-                    <div className="h-12 w-20 sm:h-14 sm:w-24 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-orange-500/30">
-                      <svg className="w-7 h-7 sm:w-9 sm:h-9 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
+              <div className="space-y-3">
+                {/* Product Image */}
+                {activeOffer.product.imageUrl ? (
+                  <img
+                    src={activeOffer.product.imageUrl}
+                    alt={activeOffer.product.name}
+                    className="w-full h-20 sm:h-28 rounded-xl object-cover border border-orange-500/30"
+                  />
+                ) : (
+                  <div className="w-full h-20 sm:h-28 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-orange-500/30">
+                    <svg className="w-9 h-9 sm:w-11 sm:h-11 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                )}
+                {/* Product Info */}
+                <div>
+                  <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
+                  {activeOffer.settings.productDescription && (
+                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
-                  {activeOffer.product.description && (
-                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-2">{activeOffer.product.description}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
-                      <span className="text-base sm:text-lg text-zinc-500 line-through">
-                        {formatPrice(activeOffer.settings.discountPrice)}
-                      </span>
-                    )}
-                    <span className="text-xl sm:text-2xl font-bold text-orange-400">
-                      {formatPrice(activeOffer.plan.price)}
+                {/* Price */}
+                <div className="flex items-center gap-2">
+                  {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
+                    <span className="text-base sm:text-lg text-zinc-500 line-through">
+                      {formatPrice(activeOffer.settings.discountPrice)}
                     </span>
-                  </div>
+                  )}
+                  <span className="text-xl sm:text-2xl font-bold text-orange-400">
+                    {formatPrice(activeOffer.plan.price)}
+                  </span>
                 </div>
               </div>
             </div>

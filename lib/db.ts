@@ -17,6 +17,8 @@ export interface OfferPageSettings {
   // Discount price display (crossed-out "was" price)
   showDiscountPrice: boolean;
   discountPrice: number; // The "original" price to show crossed out
+  // Custom product description (admin-defined, not imported from Whop)
+  productDescription: string;
 }
 
 // Separate settings for upsell and downsell offers
@@ -180,6 +182,7 @@ const DEFAULT_UPSELL_SETTINGS: OfferPageSettings = {
   reviewStars: 5,
   showDiscountPrice: false,
   discountPrice: 0,
+  productDescription: "",
 };
 
 const DEFAULT_DOWNSELL_SETTINGS: OfferPageSettings = {
@@ -193,6 +196,7 @@ const DEFAULT_DOWNSELL_SETTINGS: OfferPageSettings = {
   reviewStars: 5,
   showDiscountPrice: false,
   discountPrice: 0,
+  productDescription: "",
 };
 
 const DEFAULT_OFFER_SETTINGS: FlowOfferSettings = {

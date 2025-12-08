@@ -16,6 +16,7 @@ interface OfferSettings {
   reviewStars: number;
   showDiscountPrice: boolean;
   discountPrice: number;
+  productDescription: string;
 }
 
 interface FlowConfig {
@@ -96,6 +97,7 @@ export default function EditorPage() {
   const [upsellStarRating, setUpsellStarRating] = useState(5);
   const [upsellShowDiscountPrice, setUpsellShowDiscountPrice] = useState(false);
   const [upsellDiscountPrice, setUpsellDiscountPrice] = useState(0);
+  const [upsellProductDescription, setUpsellProductDescription] = useState("");
 
   // Downsell product state
   const [downsellHeadline, setDownsellHeadline] = useState("Before you go...");
@@ -110,6 +112,7 @@ export default function EditorPage() {
   const [downsellStarRating, setDownsellStarRating] = useState(5);
   const [downsellShowDiscountPrice, setDownsellShowDiscountPrice] = useState(false);
   const [downsellDiscountPrice, setDownsellDiscountPrice] = useState(0);
+  const [downsellProductDescription, setDownsellProductDescription] = useState("");
 
   // Fetch settings and products on mount
   const fetchSettings = useCallback(async () => {
@@ -145,6 +148,7 @@ export default function EditorPage() {
           setUpsellStarRating(upsell.reviewStars);
           if (upsell.showDiscountPrice !== undefined) setUpsellShowDiscountPrice(upsell.showDiscountPrice);
           if (upsell.discountPrice !== undefined) setUpsellDiscountPrice(upsell.discountPrice);
+          if (upsell.productDescription !== undefined) setUpsellProductDescription(upsell.productDescription);
         }
 
         if (data.offerSettings?.downsell) {
@@ -161,6 +165,7 @@ export default function EditorPage() {
           setDownsellStarRating(downsell.reviewStars);
           if (downsell.showDiscountPrice !== undefined) setDownsellShowDiscountPrice(downsell.showDiscountPrice);
           if (downsell.discountPrice !== undefined) setDownsellDiscountPrice(downsell.discountPrice);
+          if (downsell.productDescription !== undefined) setDownsellProductDescription(downsell.productDescription);
         }
       }
 
@@ -195,6 +200,7 @@ export default function EditorPage() {
   const starRating = activeProduct === "upsell" ? upsellStarRating : downsellStarRating;
   const showDiscountPrice = activeProduct === "upsell" ? upsellShowDiscountPrice : downsellShowDiscountPrice;
   const discountPrice = activeProduct === "upsell" ? upsellDiscountPrice : downsellDiscountPrice;
+  const productDescription = activeProduct === "upsell" ? upsellProductDescription : downsellProductDescription;
 
   // Setters based on active product
   const setHeadline = activeProduct === "upsell" ? setUpsellHeadline : setDownsellHeadline;
@@ -209,6 +215,7 @@ export default function EditorPage() {
   const setStarRating = activeProduct === "upsell" ? setUpsellStarRating : setDownsellStarRating;
   const setShowDiscountPrice = activeProduct === "upsell" ? setUpsellShowDiscountPrice : setDownsellShowDiscountPrice;
   const setDiscountPrice = activeProduct === "upsell" ? setUpsellDiscountPrice : setDownsellDiscountPrice;
+  const setProductDescription = activeProduct === "upsell" ? setUpsellProductDescription : setDownsellProductDescription;
 
   const handleSave = async () => {
     try {
@@ -226,6 +233,7 @@ export default function EditorPage() {
         reviewStars: upsellStarRating,
         showDiscountPrice: upsellShowDiscountPrice,
         discountPrice: upsellDiscountPrice,
+        productDescription: upsellProductDescription,
       };
 
       const downsellSettings: OfferSettings = {
@@ -239,6 +247,7 @@ export default function EditorPage() {
         reviewStars: downsellStarRating,
         showDiscountPrice: downsellShowDiscountPrice,
         discountPrice: downsellDiscountPrice,
+        productDescription: downsellProductDescription,
       };
 
       const response = await fetch("/api/flow/settings", {
@@ -416,48 +425,51 @@ export default function EditorPage() {
                       {/* Product Display */}
                       <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-2.5 mb-3">
                         {upsellProductData ? (
-                          <div className="flex gap-2.5">
-                            <div className="flex-shrink-0">
-                              {upsellProductData.imageUrl ? (
-                                <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="h-14 w-24 rounded-lg object-cover border border-zinc-700" />
-                              ) : (
-                                <div className="h-14 w-24 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-zinc-700">
-                                  <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                  </svg>
-                                </div>
+                          <div className="space-y-2">
+                            {/* Product Image */}
+                            {upsellProductData.imageUrl ? (
+                              <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full h-20 rounded-lg object-cover border border-zinc-700" />
+                            ) : (
+                              <div className="w-full h-20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-zinc-700">
+                                <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                              </div>
+                            )}
+                            {/* Product Info */}
+                            <div>
+                              <h2 className="text-sm font-semibold text-white">{upsellProductData.title}</h2>
+                              {upsellProductDescription && (
+                                <p className="text-zinc-400 text-[11px] mt-0.5 line-clamp-2">{upsellProductDescription}</p>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h2 className="text-sm font-semibold text-white">{upsellProductData.title}</h2>
-                              <p className="text-zinc-400 text-[11px] mt-0.5 line-clamp-2">{upsellProductData.headline || upsellProductData.description || "No description"}</p>
-                              <div className="flex items-center gap-1.5 mt-1.5">
+                            {/* Price and Billing */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
                                 {upsellShowDiscountPrice && upsellDiscountPrice > 0 && (
                                   <span className="text-sm text-zinc-500 line-through">{formatPrice(upsellDiscountPrice, upsellProductData.currency)}</span>
                                 )}
                                 <span className="text-base font-bold text-green-500">{formatPrice(upsellProductData.price, upsellProductData.currency)}</span>
                               </div>
-                              <div className="mt-1.5">
-                                <span className={`inline-flex items-center gap-1 text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                  upsellProductData.planType === "renewal" ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
-                                }`}>
-                                  {upsellProductData.planType === "renewal" ? (
-                                    <>
-                                      <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                      </svg>
-                                      {upsellProductData.billingPeriod === 30 ? "Monthly" : upsellProductData.billingPeriod === 365 ? "Yearly" : "Recurring"}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                      One Time Purchase
-                                    </>
-                                  )}
-                                </span>
-                              </div>
+                              <span className={`inline-flex items-center gap-1 text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
+                                upsellProductData.planType === "renewal" ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                              }`}>
+                                {upsellProductData.planType === "renewal" ? (
+                                  <>
+                                    <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    {upsellProductData.billingPeriod === 30 ? "Monthly" : upsellProductData.billingPeriod === 365 ? "Yearly" : "Recurring"}
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    One Time
+                                  </>
+                                )}
+                              </span>
                             </div>
                           </div>
                         ) : (
@@ -538,27 +550,30 @@ export default function EditorPage() {
 
                       <div className="bg-zinc-800/50 border border-orange-500/20 rounded-lg p-3 mb-3">
                         {downsellProductData ? (
-                          <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0">
-                              {downsellProductData.imageUrl ? (
-                                <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="h-12 w-20 rounded-lg object-cover border border-orange-500/30" />
-                              ) : (
-                                <div className="h-12 w-20 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
-                                  <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                  </svg>
-                                </div>
+                          <div className="space-y-2">
+                            {/* Product Image */}
+                            {downsellProductData.imageUrl ? (
+                              <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full h-16 rounded-lg object-cover border border-orange-500/30" />
+                            ) : (
+                              <div className="w-full h-16 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
+                                <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                              </div>
+                            )}
+                            {/* Product Info */}
+                            <div>
+                              <h2 className="text-sm font-semibold text-white">{downsellProductData.title}</h2>
+                              {downsellProductDescription && (
+                                <p className="text-zinc-400 text-[10px] mt-0.5 line-clamp-2">{downsellProductDescription}</p>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h2 className="text-sm font-semibold text-white">{downsellProductData.title}</h2>
-                              <p className="text-zinc-400 text-[10px] mt-0.5 line-clamp-2">{downsellProductData.headline || downsellProductData.description || "No description"}</p>
-                              <div className="flex items-center gap-1.5 mt-1.5">
-                                {downsellShowDiscountPrice && downsellDiscountPrice > 0 && (
-                                  <span className="text-sm text-zinc-500 line-through">{formatPrice(downsellDiscountPrice, downsellProductData.currency)}</span>
-                                )}
-                                <span className="text-lg font-bold text-orange-400">{formatPrice(downsellProductData.price, downsellProductData.currency)}</span>
-                              </div>
+                            {/* Price */}
+                            <div className="flex items-center gap-1.5">
+                              {downsellShowDiscountPrice && downsellDiscountPrice > 0 && (
+                                <span className="text-sm text-zinc-500 line-through">{formatPrice(downsellDiscountPrice, downsellProductData.currency)}</span>
+                              )}
+                              <span className="text-lg font-bold text-orange-400">{formatPrice(downsellProductData.price, downsellProductData.currency)}</span>
                             </div>
                           </div>
                         ) : (
@@ -876,6 +891,27 @@ export default function EditorPage() {
             />
             <p className="text-xs text-zinc-500">
               &quot;One-Click Charge&quot; subtext is always shown below the button.
+            </p>
+          </div>
+
+          {/* Divider - Product Info */}
+          <div className="border-t border-zinc-800 pt-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Product Info</h3>
+          </div>
+
+          {/* Product Description */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-zinc-300">Product Description</label>
+            <textarea
+              value={productDescription}
+              onChange={(e) => setProductDescription(e.target.value)}
+              placeholder="Enter a short description of the product..."
+              rows={3}
+              maxLength={200}
+              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+            />
+            <p className="text-xs text-zinc-500">
+              Custom description shown on the offer card. Max 200 characters. ({productDescription.length}/200)
             </p>
           </div>
 
