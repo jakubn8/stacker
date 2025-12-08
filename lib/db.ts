@@ -14,6 +14,9 @@ export interface OfferPageSettings {
   reviewText: string;
   reviewAuthor: string;
   reviewStars: number;
+  // Discount price display (crossed-out "was" price)
+  showDiscountPrice: boolean;
+  discountPrice: number; // The "original" price to show crossed out
 }
 
 // Separate settings for upsell and downsell offers
@@ -173,6 +176,8 @@ const DEFAULT_UPSELL_SETTINGS: OfferPageSettings = {
   reviewText: "This was exactly what I needed! Highly recommend.",
   reviewAuthor: "@HappyCustomer",
   reviewStars: 5,
+  showDiscountPrice: false,
+  discountPrice: 0,
 };
 
 const DEFAULT_DOWNSELL_SETTINGS: OfferPageSettings = {
@@ -184,6 +189,8 @@ const DEFAULT_DOWNSELL_SETTINGS: OfferPageSettings = {
   reviewText: "Great value for the price! Exactly what I needed to get started.",
   reviewAuthor: "@NewCustomer",
   reviewStars: 5,
+  showDiscountPrice: false,
+  discountPrice: 0,
 };
 
 const DEFAULT_OFFER_SETTINGS: FlowOfferSettings = {

@@ -14,6 +14,8 @@ interface OfferSettings {
   reviewText: string;
   reviewAuthor: string;
   reviewStars: number;
+  showDiscountPrice: boolean;
+  discountPrice: number;
 }
 
 interface FlowConfig {
@@ -92,6 +94,8 @@ export default function EditorPage() {
   const [upsellReviewText, setUpsellReviewText] = useState("Saved my account! This protocol helped me avoid blowing up during the recent market crash. Worth every penny.");
   const [upsellAuthorName, setUpsellAuthorName] = useState("@TradingPro");
   const [upsellStarRating, setUpsellStarRating] = useState(5);
+  const [upsellShowDiscountPrice, setUpsellShowDiscountPrice] = useState(false);
+  const [upsellDiscountPrice, setUpsellDiscountPrice] = useState(0);
 
   // Downsell product state
   const [downsellHeadline, setDownsellHeadline] = useState("Before you go...");
@@ -104,6 +108,8 @@ export default function EditorPage() {
   const [downsellReviewText, setDownsellReviewText] = useState("Great value for the price! Exactly what I needed to get started.");
   const [downsellAuthorName, setDownsellAuthorName] = useState("@NewTrader");
   const [downsellStarRating, setDownsellStarRating] = useState(5);
+  const [downsellShowDiscountPrice, setDownsellShowDiscountPrice] = useState(false);
+  const [downsellDiscountPrice, setDownsellDiscountPrice] = useState(0);
 
   // Fetch settings and products on mount
   const fetchSettings = useCallback(async () => {
@@ -137,6 +143,8 @@ export default function EditorPage() {
           setUpsellReviewText(upsell.reviewText);
           setUpsellAuthorName(upsell.reviewAuthor);
           setUpsellStarRating(upsell.reviewStars);
+          if (upsell.showDiscountPrice !== undefined) setUpsellShowDiscountPrice(upsell.showDiscountPrice);
+          if (upsell.discountPrice !== undefined) setUpsellDiscountPrice(upsell.discountPrice);
         }
 
         if (data.offerSettings?.downsell) {
@@ -151,6 +159,8 @@ export default function EditorPage() {
           setDownsellReviewText(downsell.reviewText);
           setDownsellAuthorName(downsell.reviewAuthor);
           setDownsellStarRating(downsell.reviewStars);
+          if (downsell.showDiscountPrice !== undefined) setDownsellShowDiscountPrice(downsell.showDiscountPrice);
+          if (downsell.discountPrice !== undefined) setDownsellDiscountPrice(downsell.discountPrice);
         }
       }
 
@@ -183,6 +193,8 @@ export default function EditorPage() {
   const reviewText = activeProduct === "upsell" ? upsellReviewText : downsellReviewText;
   const authorName = activeProduct === "upsell" ? upsellAuthorName : downsellAuthorName;
   const starRating = activeProduct === "upsell" ? upsellStarRating : downsellStarRating;
+  const showDiscountPrice = activeProduct === "upsell" ? upsellShowDiscountPrice : downsellShowDiscountPrice;
+  const discountPrice = activeProduct === "upsell" ? upsellDiscountPrice : downsellDiscountPrice;
 
   // Setters based on active product
   const setHeadline = activeProduct === "upsell" ? setUpsellHeadline : setDownsellHeadline;
@@ -195,6 +207,8 @@ export default function EditorPage() {
   const setReviewText = activeProduct === "upsell" ? setUpsellReviewText : setDownsellReviewText;
   const setAuthorName = activeProduct === "upsell" ? setUpsellAuthorName : setDownsellAuthorName;
   const setStarRating = activeProduct === "upsell" ? setUpsellStarRating : setDownsellStarRating;
+  const setShowDiscountPrice = activeProduct === "upsell" ? setUpsellShowDiscountPrice : setDownsellShowDiscountPrice;
+  const setDiscountPrice = activeProduct === "upsell" ? setUpsellDiscountPrice : setDownsellDiscountPrice;
 
   const handleSave = async () => {
     try {
@@ -210,6 +224,8 @@ export default function EditorPage() {
         reviewText: upsellReviewText,
         reviewAuthor: upsellAuthorName,
         reviewStars: upsellStarRating,
+        showDiscountPrice: upsellShowDiscountPrice,
+        discountPrice: upsellDiscountPrice,
       };
 
       const downsellSettings: OfferSettings = {
@@ -221,6 +237,8 @@ export default function EditorPage() {
         reviewText: downsellReviewText,
         reviewAuthor: downsellAuthorName,
         reviewStars: downsellStarRating,
+        showDiscountPrice: downsellShowDiscountPrice,
+        discountPrice: downsellDiscountPrice,
       };
 
       const response = await fetch("/api/flow/settings", {
@@ -414,6 +432,9 @@ export default function EditorPage() {
                               <h2 className="text-sm font-semibold text-white">{upsellProductData.title}</h2>
                               <p className="text-zinc-400 text-[11px] mt-0.5 line-clamp-2">{upsellProductData.headline || upsellProductData.description || "No description"}</p>
                               <div className="flex items-center gap-1.5 mt-1.5">
+                                {upsellShowDiscountPrice && upsellDiscountPrice > 0 && (
+                                  <span className="text-sm text-zinc-500 line-through">{formatPrice(upsellDiscountPrice, upsellProductData.currency)}</span>
+                                )}
                                 <span className="text-base font-bold text-green-500">{formatPrice(upsellProductData.price, upsellProductData.currency)}</span>
                               </div>
                               <div className="mt-1.5">
@@ -533,6 +554,9 @@ export default function EditorPage() {
                               <h2 className="text-sm font-semibold text-white">{downsellProductData.title}</h2>
                               <p className="text-zinc-400 text-[10px] mt-0.5 line-clamp-2">{downsellProductData.headline || downsellProductData.description || "No description"}</p>
                               <div className="flex items-center gap-1.5 mt-1.5">
+                                {downsellShowDiscountPrice && downsellDiscountPrice > 0 && (
+                                  <span className="text-sm text-zinc-500 line-through">{formatPrice(downsellDiscountPrice, downsellProductData.currency)}</span>
+                                )}
                                 <span className="text-lg font-bold text-orange-400">{formatPrice(downsellProductData.price, downsellProductData.currency)}</span>
                               </div>
                             </div>
@@ -854,6 +878,55 @@ export default function EditorPage() {
               &quot;One-Click Charge&quot; subtext is always shown below the button.
             </p>
           </div>
+
+          {/* Divider - Pricing */}
+          <div className="border-t border-zinc-800 pt-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Pricing Display</h3>
+          </div>
+
+          {/* Show Discount Price Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-zinc-300">Show Discount Price</label>
+              <p className="text-xs text-zinc-500 mt-0.5">Display a crossed-out &quot;was&quot; price</p>
+            </div>
+            <button
+              onClick={() => setShowDiscountPrice(!showDiscountPrice)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                showDiscountPrice ? "bg-green-500" : "bg-zinc-600"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showDiscountPrice ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Discount Price Input (Conditional) */}
+          {showDiscountPrice && (
+            <div className="space-y-2 pl-0 border-l-2 border-green-500/30 ml-0 animate-in fade-in duration-200">
+              <div className="pl-4 space-y-2">
+                <label className="text-sm font-medium text-zinc-300">Original Price (crossed out)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={discountPrice || ""}
+                    onChange={(e) => setDiscountPrice(parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <p className="text-xs text-zinc-500">
+                  This price will appear crossed out next to the actual price.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Divider - Bullet Points */}
           <div className="border-t border-zinc-800 pt-6">

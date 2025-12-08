@@ -26,6 +26,8 @@ interface OfferSettings {
   reviewText: string;
   reviewAuthor: string;
   reviewStars: number;
+  showDiscountPrice?: boolean;
+  discountPrice?: number;
 }
 
 interface OfferData {
@@ -222,6 +224,11 @@ function OfferPageContent() {
                     <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-2">{activeOffer.product.description}</p>
                   )}
                   <div className="flex items-center gap-2 mt-2">
+                    {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
+                      <span className="text-sm sm:text-base text-zinc-500 line-through">
+                        {formatPrice(activeOffer.settings.discountPrice)}
+                      </span>
+                    )}
                     <span className="text-lg sm:text-xl font-bold text-green-500">
                       {formatPrice(activeOffer.plan.price)}
                     </span>
@@ -370,6 +377,11 @@ function OfferPageContent() {
                     <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-2">{activeOffer.product.description}</p>
                   )}
                   <div className="flex items-center gap-2 mt-2">
+                    {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
+                      <span className="text-base sm:text-lg text-zinc-500 line-through">
+                        {formatPrice(activeOffer.settings.discountPrice)}
+                      </span>
+                    )}
                     <span className="text-xl sm:text-2xl font-bold text-orange-400">
                       {formatPrice(activeOffer.plan.price)}
                     </span>
