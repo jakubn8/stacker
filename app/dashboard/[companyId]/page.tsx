@@ -23,18 +23,6 @@ export default function DashboardHome() {
       bgColor: "bg-purple-500/10",
     },
     {
-      title: "Billing Portal",
-      description: "View your bill, payment history, and manage billing",
-      href: `/dashboard/${companyId}/billing`,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      ),
-      iconColor: "text-orange-400",
-      bgColor: "bg-orange-500/10",
-    },
-    {
       title: "Offer Page Editor",
       description: "Customize your upsell and downsell pages",
       href: `/dashboard/${companyId}/editor`,
@@ -58,6 +46,18 @@ export default function DashboardHome() {
       ),
       iconColor: "text-blue-400",
       bgColor: "bg-blue-500/10",
+    },
+    {
+      title: "Billing Portal",
+      description: "View your bill, payment history, and manage billing",
+      href: `/dashboard/${companyId}/billing`,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      ),
+      iconColor: "text-orange-400",
+      bgColor: "bg-orange-500/10",
     },
   ];
 
@@ -193,12 +193,6 @@ export default function DashboardHome() {
           ))}
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-10 pt-6 border-t border-zinc-800">
-          <p className="text-zinc-600 text-sm">
-            Built with Next.js + @whop/frosted-ui
-          </p>
-        </div>
         </div>
       </div>
     </div>

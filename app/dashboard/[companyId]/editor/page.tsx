@@ -377,27 +377,9 @@ export default function EditorPage() {
         {/* Centered Preview Card */}
         <div className="h-full flex items-center justify-center p-4 pt-20">
           {deviceMode === "desktop" ? (
-            /* Desktop View - Browser frame */
-            <div className="w-[680px] max-h-[calc(100vh-180px)] bg-zinc-900 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden flex flex-col">
-              {/* Browser Chrome */}
-              <div className="h-7 bg-zinc-800 flex items-center px-3 gap-2 flex-shrink-0">
-                <div className="flex gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-red-500/80"></div>
-                  <div className="w-2 h-2 rounded-full bg-yellow-500/80"></div>
-                  <div className="w-2 h-2 rounded-full bg-green-500/80"></div>
-                </div>
-                <div className="flex-1 flex justify-center">
-                  <div className="bg-zinc-700 rounded px-2.5 py-0.5 text-zinc-400 text-[9px] flex items-center gap-1">
-                    <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    whop.com/offer
-                  </div>
-                </div>
-              </div>
-              {/* Browser Content */}
-              <div className="flex-1 bg-gradient-to-br from-purple-900/30 via-zinc-950 to-green-900/20 flex items-center justify-center overflow-y-auto p-3">
-                {activeProduct === "upsell" ? (
+            /* Desktop View - Card only, no browser frame */
+            <div className="flex items-center justify-center">
+              {activeProduct === "upsell" ? (
                   /* UPSELL CARD - Desktop */
                   <div className="w-full max-w-[300px] bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl overflow-hidden scale-[0.9]">
                     {/* Header Badge */}
@@ -623,7 +605,6 @@ export default function EditorPage() {
                     </div>
                   </div>
                 )}
-              </div>
             </div>
           ) : (
             /* Mobile View - Phone frame (6.1" display proportions ~1:2.16 ratio) */
