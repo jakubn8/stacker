@@ -209,10 +209,10 @@ function OfferPageContent() {
                   <img
                     src={activeOffer.product.imageUrl}
                     alt={activeOffer.product.name}
-                    className="w-full h-24 sm:h-32 rounded-xl object-cover border border-zinc-700"
+                    className="w-full aspect-video rounded-xl object-cover border border-zinc-700"
                   />
                 ) : (
-                  <div className="w-full h-24 sm:h-32 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
+                  <div className="w-full aspect-video bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
                     <svg className="w-10 h-10 sm:w-12 sm:h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
@@ -363,10 +363,10 @@ function OfferPageContent() {
                   <img
                     src={activeOffer.product.imageUrl}
                     alt={activeOffer.product.name}
-                    className="w-full h-20 sm:h-28 rounded-xl object-cover border border-orange-500/30"
+                    className="w-full aspect-video rounded-xl object-cover border border-orange-500/30"
                   />
                 ) : (
-                  <div className="w-full h-20 sm:h-28 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-orange-500/30">
+                  <div className="w-full aspect-video bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-orange-500/30">
                     <svg className="w-9 h-9 sm:w-11 sm:h-11 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>

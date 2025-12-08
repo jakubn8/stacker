@@ -428,9 +428,9 @@ export default function EditorPage() {
                           <div className="space-y-2">
                             {/* Product Image */}
                             {upsellProductData.imageUrl ? (
-                              <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full h-20 rounded-lg object-cover border border-zinc-700" />
+                              <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full aspect-video rounded-lg object-cover border border-zinc-700" />
                             ) : (
-                              <div className="w-full h-20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-zinc-700">
+                              <div className="w-full aspect-video bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-zinc-700">
                                 <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                 </svg>
@@ -553,9 +553,9 @@ export default function EditorPage() {
                           <div className="space-y-2">
                             {/* Product Image */}
                             {downsellProductData.imageUrl ? (
-                              <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full h-16 rounded-lg object-cover border border-orange-500/30" />
+                              <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full aspect-video rounded-lg object-cover border border-orange-500/30" />
                             ) : (
-                              <div className="w-full h-16 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
+                              <div className="w-full aspect-video bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
                                 <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                 </svg>
@@ -659,9 +659,9 @@ export default function EditorPage() {
                             <div className="space-y-1">
                               {/* Image */}
                               {upsellProductData.imageUrl ? (
-                                <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full h-10 rounded-md object-cover border border-zinc-700" />
+                                <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full aspect-video rounded-md object-cover border border-zinc-700" />
                               ) : (
-                                <div className="w-full h-10 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-md flex items-center justify-center border border-zinc-700">
+                                <div className="w-full aspect-video bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-md flex items-center justify-center border border-zinc-700">
                                   <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                   </svg>
@@ -760,9 +760,9 @@ export default function EditorPage() {
                             <div className="space-y-1">
                               {/* Image */}
                               {downsellProductData.imageUrl ? (
-                                <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full h-9 rounded-md object-cover border border-orange-500/30" />
+                                <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full aspect-video rounded-md object-cover border border-orange-500/30" />
                               ) : (
-                                <div className="w-full h-9 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-md flex items-center justify-center border border-orange-500/30">
+                                <div className="w-full aspect-video bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-md flex items-center justify-center border border-orange-500/30">
                                   <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                   </svg>
