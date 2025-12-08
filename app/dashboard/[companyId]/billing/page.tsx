@@ -373,16 +373,15 @@ export default function BillingPortalPage() {
                   <p className="text-zinc-400 text-sm mb-1">Next Payment</p>
                   <p className="text-3xl font-bold text-white">
                     {billingStatus.billing.daysTillBilling > 0
-                      ? `${billingStatus.billing.daysTillBilling}d`
+                      ? `${billingStatus.billing.daysTillBilling} ${billingStatus.billing.daysTillBilling === 1 ? "Day" : "Days"}`
                       : "Today"}
                   </p>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-                  <p className="text-zinc-400 text-sm mb-1">This Period</p>
+                  <p className="text-zinc-400 text-sm mb-1">Upsells This Period</p>
                   <p className="text-3xl font-bold text-white">
                     {billingStatus.billing.pendingTransactionCount}
                   </p>
-                  <p className="text-zinc-500 text-xs">upsells</p>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
                   <p className="text-zinc-400 text-sm mb-1">Total Revenue</p>
@@ -394,15 +393,6 @@ export default function BillingPortalPage() {
 
               {/* Payment Actions */}
               <div className="flex flex-wrap items-center gap-3">
-                {billingStatus.billing.pendingFee >= 0.50 && billingStatus.billing.status === "active" && (
-                  <button
-                    onClick={handlePayNow}
-                    disabled={payingNow}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {payingNow ? "Loading..." : "Pay Early"}
-                  </button>
-                )}
                 <button
                   onClick={handleUpdatePaymentMethod}
                   disabled={connectingPayment}

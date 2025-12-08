@@ -130,27 +130,33 @@ export default function StorePreviewPage() {
 
                 {/* Product Info */}
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold text-base">{product.title}</h3>
-                      {product.description && (
-                        <p className="text-zinc-500 text-sm mt-1 line-clamp-2">{product.description}</p>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="elevated"
-                      disabled
-                      className="px-4 py-1.5 flex-shrink-0 opacity-50 cursor-not-allowed"
-                    >
+                  {/* Title and Price Row */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-white font-semibold text-base">{product.title}</h3>
+                    <span className="px-4 py-2 bg-zinc-800 text-white text-sm font-semibold rounded-lg">
                       {product.price === 0 ? "Free" : formatPrice(product.price, product.currency)}
                       {product.planType === "renewal" && product.billingPeriod && product.price > 0 && (
-                        <span className="text-white/70 ml-1">
+                        <span className="text-zinc-400 ml-1">
                           /{product.billingPeriod === 30 ? "mo" : product.billingPeriod === 365 ? "yr" : `${product.billingPeriod}d`}
                         </span>
                       )}
-                    </Button>
+                    </span>
                   </div>
+
+                  {/* Description */}
+                  {product.description && (
+                    <p className="text-zinc-500 text-sm line-clamp-3 mb-4 min-h-[3.75rem]">{product.description}</p>
+                  )}
+
+                  {/* Preview Buy Button (disabled) */}
+                  <Button
+                    size="sm"
+                    variant="elevated"
+                    disabled
+                    className="w-full opacity-50 cursor-not-allowed"
+                  >
+                    Buy
+                  </Button>
                 </div>
               </div>
             ))}

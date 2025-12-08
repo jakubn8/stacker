@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    const { userId, whopUserId, whopCompanyId, whopMemberId, email } = body;
+    const { userId, whopUserId, whopCompanyId, whopMemberId, email, updateExisting } = body;
 
     if (!whopUserId || !whopCompanyId) {
       return NextResponse.json(
@@ -38,8 +38,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Check if user already has a payment method
-    if (user.paymentMethodConnected) {
+    // Check if user already has a payment method (unless updating)
+    if (user.paymentMethodConnected && !updateExisting) {
       return NextResponse.json(
         { error: "Payment method already connected", alreadyConnected: true },
         { status: 400 }

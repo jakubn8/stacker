@@ -43,6 +43,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Check if this is a valid Whop company ID (starts with biz_)
+    if (!companyId.startsWith("biz_")) {
+      console.log(`Skipping Whop API for non-Whop company ID: ${companyId}`);
+      return NextResponse.json({
+        success: true,
+        products: [],
+        count: 0,
+        message: "No products available - connect a valid Whop company",
+      });
+    }
+
     console.log(`Fetching products for company: ${companyId}, user: ${userId || "anonymous"}`);
 
     // Get user's owned products (if authenticated)
