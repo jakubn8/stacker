@@ -152,9 +152,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             billingPeriod = plan.billing_period;
             planId = plan.id;
 
-            // Always use initial_price as the primary price
-            // This is what Whop updates when you change the plan price
-            price = plan.initial_price;
+            // For recurring plans, use renewal_price (what they pay each month)
+            // For one-time plans, use initial_price (what they pay once)
+            if (planType === "renewal") {
+              price = plan.renewal_price ?? plan.initial_price;
+            } else {
+              price = plan.initial_price;
+            }
+
+            console.log(`Plan ${plan.id}: type=${planType}, initial=${plan.initial_price}, renewal=${plan.renewal_price}, using=${price}`);
 
             break; // Just use the first plan
           }
