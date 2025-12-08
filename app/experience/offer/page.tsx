@@ -208,10 +208,10 @@ function OfferPageContent() {
                     <img
                       src={activeOffer.product.imageUrl}
                       alt={activeOffer.product.name}
-                      className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover border border-zinc-700"
+                      className="h-14 w-24 sm:h-16 sm:w-28 rounded-xl object-cover border border-zinc-700"
                     />
                   ) : (
-                    <div className="h-16 w-16 sm:h-20 sm:w-20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
+                    <div className="h-14 w-24 sm:h-16 sm:w-28 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
                       <svg className="w-8 h-8 sm:w-10 sm:h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
@@ -361,10 +361,10 @@ function OfferPageContent() {
                     <img
                       src={activeOffer.product.imageUrl}
                       alt={activeOffer.product.name}
-                      className="h-14 w-14 sm:h-18 sm:w-18 rounded-xl object-cover border border-orange-500/30"
+                      className="h-12 w-20 sm:h-14 sm:w-24 rounded-xl object-cover border border-orange-500/30"
                     />
                   ) : (
-                    <div className="h-14 w-14 sm:h-18 sm:w-18 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-orange-500/30">
+                    <div className="h-12 w-20 sm:h-14 sm:w-24 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-orange-500/30">
                       <svg className="w-7 h-7 sm:w-9 sm:h-9 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>

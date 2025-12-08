@@ -419,9 +419,9 @@ export default function EditorPage() {
                           <div className="flex gap-2.5">
                             <div className="flex-shrink-0">
                               {upsellProductData.imageUrl ? (
-                                <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="h-16 w-16 rounded-lg object-cover border border-zinc-700" />
+                                <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="h-14 w-24 rounded-lg object-cover border border-zinc-700" />
                               ) : (
-                                <div className="h-16 w-16 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-zinc-700">
+                                <div className="h-14 w-24 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-zinc-700">
                                   <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                   </svg>
@@ -541,9 +541,9 @@ export default function EditorPage() {
                           <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
                               {downsellProductData.imageUrl ? (
-                                <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="h-14 w-14 rounded-lg object-cover border border-orange-500/30" />
+                                <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="h-12 w-20 rounded-lg object-cover border border-orange-500/30" />
                               ) : (
-                                <div className="h-14 w-14 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
+                                <div className="h-12 w-20 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
                                   <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                   </svg>
@@ -644,9 +644,9 @@ export default function EditorPage() {
                             <div className="flex gap-1.5">
                               <div className="flex-shrink-0">
                                 {upsellProductData.imageUrl ? (
-                                  <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="h-9 w-9 rounded-md object-cover border border-zinc-700" />
+                                  <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="h-8 w-14 rounded-md object-cover border border-zinc-700" />
                                 ) : (
-                                  <div className="h-9 w-9 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-md flex items-center justify-center border border-zinc-700">
+                                  <div className="h-8 w-14 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-md flex items-center justify-center border border-zinc-700">
                                     <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
@@ -729,9 +729,9 @@ export default function EditorPage() {
                             <div className="flex items-center gap-1.5">
                               <div className="flex-shrink-0">
                                 {downsellProductData.imageUrl ? (
-                                  <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="h-8 w-8 rounded-md object-cover border border-orange-500/30" />
+                                  <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="h-7 w-12 rounded-md object-cover border border-orange-500/30" />
                                 ) : (
-                                  <div className="h-8 w-8 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-md flex items-center justify-center border border-orange-500/30">
+                                  <div className="h-7 w-12 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-md flex items-center justify-center border border-orange-500/30">
                                     <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>

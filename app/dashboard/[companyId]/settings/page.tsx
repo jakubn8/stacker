@@ -1517,7 +1517,7 @@ export default function DashboardPage() {
                           {/* Product Image with Upload/Edit */}
                           <div className="relative group">
                             {isUploading ? (
-                              <div className="h-10 w-10 bg-zinc-700 rounded-lg flex items-center justify-center">
+                              <div className="h-9 w-16 bg-zinc-700 rounded-lg flex items-center justify-center">
                                 <div className="h-5 w-5 border-2 border-zinc-500 border-t-green-500 rounded-full animate-spin"></div>
                               </div>
                             ) : imageUrl ? (
@@ -1525,7 +1525,7 @@ export default function DashboardPage() {
                                 <img
                                   src={imageUrl}
                                   alt={product.title}
-                                  className="h-10 w-10 rounded-lg object-cover"
+                                  className="h-9 w-16 rounded-lg object-cover"
                                 />
                                 {/* Edit overlay */}
                                 <button
@@ -1541,7 +1541,7 @@ export default function DashboardPage() {
                             ) : (
                               <button
                                 onClick={() => handleImageUploadClick(product.id)}
-                                className="h-10 w-10 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center hover:bg-orange-500/30 transition-colors cursor-pointer group/upload"
+                                className="h-9 w-16 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center hover:bg-orange-500/30 transition-colors cursor-pointer group/upload"
                                 title="Upload image"
                               >
                                 <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1616,10 +1616,10 @@ export default function DashboardPage() {
                             <img
                               src={imageUrl}
                               alt={product.title}
-                              className="h-10 w-10 rounded-lg object-cover grayscale"
+                              className="h-9 w-16 rounded-lg object-cover grayscale"
                             />
                           ) : (
-                            <div className="h-10 w-10 bg-zinc-700 rounded-lg flex items-center justify-center">
+                            <div className="h-9 w-16 bg-zinc-700 rounded-lg flex items-center justify-center">
                               <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                               </svg>
