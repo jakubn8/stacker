@@ -6,8 +6,10 @@ import {
   updateOfferSettings,
   updateFlowConfig,
   getNotificationSettings,
+  updateNotificationSettings,
   type OfferPageSettings,
   type FlowConfig,
+  type NotificationSettings,
 } from "@/lib/db";
 import { verifyAuthFromRequest } from "@/lib/auth";
 
@@ -86,7 +88,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    let { whopUserId, companyId, flowConfig, upsellSettings, downsellSettings } = body;
+    let { whopUserId, companyId, flowConfig, upsellSettings, downsellSettings, notificationSettings } = body;
 
     // Try to verify authentication from token
     const authResult = await verifyAuthFromRequest(request);
@@ -134,6 +136,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Update downsell settings if provided
     if (downsellSettings) {
       await updateOfferSettings(user.id, "downsell", downsellSettings as Partial<OfferPageSettings>);
+    }
+
+    // Update notification settings if provided
+    if (notificationSettings) {
+      await updateNotificationSettings(user.id, notificationSettings as Partial<NotificationSettings>);
     }
 
     return NextResponse.json({

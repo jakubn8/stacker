@@ -446,9 +446,17 @@ export async function updateNotificationSettings(
 
   const currentSettings = user.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS;
 
+  // Filter out undefined values to avoid Firestore errors
+  const filteredSettings: Partial<NotificationSettings> = {};
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      filteredSettings[key as keyof NotificationSettings] = value;
+    }
+  }
+
   const updatedSettings = {
     ...currentSettings,
-    ...settings,
+    ...filteredSettings,
   };
 
   await db.collection("users").doc(userId).update({
