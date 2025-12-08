@@ -24,6 +24,7 @@ function getFirebaseAdmin(): { app: App; db: Firestore; storage: Storage } {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
     _app = initializeApp({
       credential: cert(serviceAccount),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     });
   } else {
     _app = getApps()[0];
