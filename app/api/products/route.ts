@@ -95,7 +95,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const products: WhopProduct[] = [];
 
     try {
-      // Get all products for the company
+      // First, get list of product IDs (list endpoint doesn't include images)
+      const productIds: string[] = [];
       for await (const product of whopsdk.products.list({
         company_id: companyId,
       })) {
@@ -108,6 +109,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         if (filterHidden && hiddenProductIds.includes(product.id)) {
           continue;
         }
+
+        productIds.push(product.id);
+      }
+
+      // Fetch full product details (including images) in parallel
+      const fullProducts = await Promise.all(
+        productIds.map(async (productId) => {
+          try {
+            const fullProduct = await whopsdk.products.retrieve(productId);
+            return fullProduct;
+          } catch (err) {
+            console.error(`Failed to retrieve product ${productId}:`, err);
+            return null;
+          }
+        })
+      );
+
+      // Process each product with full details
+      for (const product of fullProducts) {
+        if (!product) continue;
 
         // Get plans for this product to get pricing
         let price = 0;

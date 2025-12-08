@@ -28,7 +28,7 @@ export default function StorePreviewPage() {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/products?companyId=${companyId}`);
+        const response = await fetch(`/api/products?companyId=${companyId}&filterHidden=true`);
         if (response.ok) {
           const data = await response.json();
           setProducts(data.products || []);
