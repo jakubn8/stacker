@@ -72,6 +72,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       offerSettings,
       notificationSettings,
       hiddenProductIds: user.hiddenProductIds || [],
+      productImages: user.productImages || {},
     });
   } catch (error) {
     console.error("Get flow settings error:", error);

@@ -78,6 +78,8 @@ export interface User {
   notificationSettings: NotificationSettings;
   // Hidden products (not shown in storefront)
   hiddenProductIds: string[];
+  // Custom product images (productId -> imageUrl)
+  productImages: Record<string, string>;
   // Legacy field - kept for backwards compatibility
   productOverrides: Record<string, ProductOverride>;
   createdAt: Timestamp;
@@ -244,6 +246,7 @@ export async function createUser(data: {
     offerSettings: DEFAULT_OFFER_SETTINGS,
     notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
     hiddenProductIds: [],
+    productImages: {},
     productOverrides: {},
     createdAt: now,
     updatedAt: now,
@@ -493,6 +496,29 @@ export async function getHiddenProducts(userId: string): Promise<string[]> {
   const user = await getUser(userId);
   if (!user) return [];
   return user.hiddenProductIds || [];
+}
+
+export async function updateProductImage(
+  userId: string,
+  productId: string,
+  imageUrl: string
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const productImages = user.productImages || {};
+  productImages[productId] = imageUrl;
+
+  await db.collection("users").doc(userId).update({
+    productImages,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function getProductImages(userId: string): Promise<Record<string, string>> {
+  const user = await getUser(userId);
+  if (!user) return {};
+  return user.productImages || {};
 }
 
 export async function updateProductOverride(

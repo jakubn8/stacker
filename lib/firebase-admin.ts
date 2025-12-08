@@ -1,13 +1,15 @@
 import { initializeApp, getApps, cert, App } from "firebase-admin/app";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
+import { getStorage, Storage } from "firebase-admin/storage";
 
 // Lazy initialization - only initialize when first accessed at runtime
 let _app: App | null = null;
 let _db: Firestore | null = null;
+let _storage: Storage | null = null;
 
-function getFirebaseAdmin(): { app: App; db: Firestore } {
-  if (_app && _db) {
-    return { app: _app, db: _db };
+function getFirebaseAdmin(): { app: App; db: Firestore; storage: Storage } {
+  if (_app && _db && _storage) {
+    return { app: _app, db: _db, storage: _storage };
   }
 
   if (getApps().length === 0) {
@@ -28,7 +30,8 @@ function getFirebaseAdmin(): { app: App; db: Firestore } {
   }
 
   _db = getFirestore(_app);
-  return { app: _app, db: _db };
+  _storage = getStorage(_app);
+  return { app: _app, db: _db, storage: _storage };
 }
 
 // Export getters that lazily initialize
@@ -45,5 +48,13 @@ export const app = new Proxy({} as App, {
     const firebaseApp = getFirebaseAdmin().app;
     const value = (firebaseApp as unknown as Record<string | symbol, unknown>)[prop];
     return typeof value === 'function' ? value.bind(firebaseApp) : value;
+  },
+});
+
+export const adminStorage = new Proxy({} as Storage, {
+  get: (_, prop) => {
+    const firebaseStorage = getFirebaseAdmin().storage;
+    const value = (firebaseStorage as unknown as Record<string | symbol, unknown>)[prop];
+    return typeof value === 'function' ? value.bind(firebaseStorage) : value;
   },
 });

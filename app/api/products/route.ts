@@ -60,13 +60,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Check if we should filter hidden products (for customer-facing store)
     const filterHidden = searchParams.get("filterHidden") === "true";
     let hiddenProductIds: string[] = [];
+    let productImages: Record<string, string> = {};
 
-    if (filterHidden) {
-      // Get the company owner's hidden products settings
-      const owner = await getUserByWhopCompanyId(companyId);
-      if (owner) {
+    // Get the company owner's settings (hidden products and custom images)
+    const owner = await getUserByWhopCompanyId(companyId);
+    if (owner) {
+      if (filterHidden) {
         hiddenProductIds = owner.hiddenProductIds || [];
       }
+      productImages = owner.productImages || {};
     }
 
     // Get user's owned products (if authenticated)
@@ -180,7 +182,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           description: product.headline || null,
           headline: product.headline,
           route: product.route,
-          imageUrl: productAny.images?.[0]?.source_url || null,
+          imageUrl: productImages[product.id] || productAny.images?.[0]?.source_url || null,
           price,
           currency,
           planType,

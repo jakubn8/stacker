@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -102,6 +102,12 @@ export default function DashboardPage() {
 
   // Hidden products (stored locally, will be persisted to DB)
   const [hiddenProductIds, setHiddenProductIds] = useState<Set<string>>(new Set());
+
+  // Product images state
+  const [productImages, setProductImages] = useState<Record<string, string>>({});
+  const [uploadingProductId, setUploadingProductId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedProductIdForUpload, setSelectedProductIdForUpload] = useState<string | null>(null);
 
   // Products state
   const [products, setProducts] = useState<WhopProduct[]>([]);
@@ -246,6 +252,10 @@ export default function DashboardPage() {
         }
         if (data.hiddenProductIds) {
           setHiddenProductIds(new Set(data.hiddenProductIds));
+        }
+        // Load product images
+        if (data.productImages) {
+          setProductImages(data.productImages);
         }
         // Load notification settings
         if (data.notificationSettings) {
@@ -543,6 +553,52 @@ export default function DashboardPage() {
     }
   };
 
+  // Image upload handlers
+  const handleImageUploadClick = (productId: string) => {
+    setSelectedProductIdForUpload(productId);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedProductIdForUpload) return;
+
+    try {
+      setUploadingProductId(selectedProductIdForUpload);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("productId", selectedProductIdForUpload);
+
+      const response = await fetch("/api/products/image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.imageUrl) {
+        setProductImages((prev) => ({
+          ...prev,
+          [selectedProductIdForUpload]: data.imageUrl,
+        }));
+      } else {
+        console.error("Failed to upload image:", data.error);
+        alert(data.error || "Failed to upload image");
+      }
+    } catch (error) {
+      console.error("Image upload error:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setUploadingProductId(null);
+      setSelectedProductIdForUpload(null);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   // Filter products into visible and hidden
   const visibleProducts = products.filter((p) => !hiddenProductIds.has(p.id));
   const hiddenProducts = products.filter((p) => hiddenProductIds.has(p.id));
@@ -555,6 +611,15 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      {/* Hidden file input for image uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
       {/* Payment Required Modal */}
       {showPaymentRequiredModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1438,30 +1503,60 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {/* Visible Products */}
-                  {visibleProducts.map((product) => (
+                  {visibleProducts.map((product) => {
+                    const imageUrl = productImages[product.id] || product.imageUrl;
+                    const isUploading = uploadingProductId === product.id;
+
+                    return (
                     <tr
                       key={product.id}
                       className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          {product.imageUrl ? (
-                            <img
-                              src={product.imageUrl}
-                              alt={product.title}
-                              className="h-10 w-10 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 bg-zinc-700 rounded-lg flex items-center justify-center">
-                              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                              </svg>
-                            </div>
-                          )}
+                          {/* Product Image with Upload/Edit */}
+                          <div className="relative group">
+                            {isUploading ? (
+                              <div className="h-10 w-10 bg-zinc-700 rounded-lg flex items-center justify-center">
+                                <div className="h-5 w-5 border-2 border-zinc-500 border-t-green-500 rounded-full animate-spin"></div>
+                              </div>
+                            ) : imageUrl ? (
+                              <>
+                                <img
+                                  src={imageUrl}
+                                  alt={product.title}
+                                  className="h-10 w-10 rounded-lg object-cover"
+                                />
+                                {/* Edit overlay */}
+                                <button
+                                  onClick={() => handleImageUploadClick(product.id)}
+                                  className="absolute inset-0 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                  title="Change image"
+                                >
+                                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleImageUploadClick(product.id)}
+                                className="h-10 w-10 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center hover:bg-orange-500/30 transition-colors cursor-pointer group/upload"
+                                title="Upload image"
+                              >
+                                <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                           <div>
                             <p className="text-white font-medium">{product.title}</p>
                             {product.headline && (
                               <p className="text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
+                            )}
+                            {!imageUrl && (
+                              <p className="text-orange-400 text-xs mt-0.5">Upload image</p>
                             )}
                           </div>
                         </div>
@@ -1504,18 +1599,22 @@ export default function DashboardPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {/* Hidden Products */}
-                  {hiddenProducts.map((product) => (
+                  {hiddenProducts.map((product) => {
+                    const imageUrl = productImages[product.id] || product.imageUrl;
+
+                    return (
                     <tr
                       key={product.id}
                       className="border-b border-zinc-800 bg-zinc-900/30 opacity-60 hover:opacity-100 transition-opacity"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          {product.imageUrl ? (
+                          {imageUrl ? (
                             <img
-                              src={product.imageUrl}
+                              src={imageUrl}
                               alt={product.title}
                               className="h-10 w-10 rounded-lg object-cover grayscale"
                             />
@@ -1564,7 +1663,8 @@ export default function DashboardPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
