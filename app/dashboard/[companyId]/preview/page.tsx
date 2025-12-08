@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Button } from "@whop/frosted-ui";
 import Link from "next/link";
 
 interface Product {
@@ -109,7 +108,7 @@ export default function StorePreviewPage() {
             {products.map((product) => (
               <div
                 key={product.id}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors"
+                className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors flex flex-col"
               >
                 {/* Product Image */}
                 <div className="aspect-[16/9] bg-zinc-800 relative">
@@ -129,7 +128,7 @@ export default function StorePreviewPage() {
                 </div>
 
                 {/* Product Info */}
-                <div className="p-4">
+                <div className="p-4 flex flex-col h-full">
                   {/* Title and Price Row */}
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-white font-semibold text-base">{product.title}</h3>
@@ -144,19 +143,18 @@ export default function StorePreviewPage() {
                   </div>
 
                   {/* Description */}
-                  {product.description && (
-                    <p className="text-zinc-500 text-sm line-clamp-3 mb-4 min-h-[3.75rem]">{product.description}</p>
-                  )}
+                  <p className="text-zinc-500 text-sm line-clamp-3 mb-4 flex-1 min-h-[3rem]">
+                    {product.description || "\u00A0"}
+                  </p>
 
                   {/* Preview Buy Button (disabled) */}
-                  <Button
-                    size="sm"
-                    variant="elevated"
+                  <button
                     disabled
-                    className="w-full opacity-50 cursor-not-allowed"
+                    className="w-full py-2.5 rounded-lg font-medium text-white opacity-50 cursor-not-allowed"
+                    style={{ backgroundColor: '#FA4616' }}
                   >
                     Buy
-                  </Button>
+                  </button>
                 </div>
               </div>
             ))}
