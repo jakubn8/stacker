@@ -151,13 +151,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           ? `https://whop.com/checkout/${planId}?d2c=true`
           : null;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const productAny = product as any;
         products.push({
           id: product.id,
           title: product.title,
           description: product.headline || null,
           headline: product.headline,
           route: product.route,
-          imageUrl: product.images?.[0]?.source_url || null,
+          imageUrl: productAny.images?.[0]?.source_url || null,
           price,
           currency,
           planType,
