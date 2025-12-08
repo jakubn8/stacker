@@ -80,9 +80,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           company_id: companyId,
           user_ids: [userId],
         })) {
-          // Add the product from each active membership
+          // Add the product from each active/completed membership
+          // "active" = ongoing subscription, "completed" = one-time purchase fulfilled
           const productId = membership.product?.id || (membership as unknown as { product_id?: string }).product_id;
-          if (productId && membership.status === "active") {
+          const status = membership.status;
+          if (productId && (status === "active" || status === "completed")) {
             ownedProductIds.add(productId);
           }
         }

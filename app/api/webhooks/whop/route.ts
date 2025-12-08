@@ -254,14 +254,15 @@ async function handleMembershipActivated(data: Record<string, unknown>): Promise
   const product = data.product as { id?: string } | undefined;
   const company = data.company as { id?: string } | undefined;
   const user = data.user as { id?: string; email?: string } | undefined;
+  const member = data.member as { id?: string } | undefined;
 
   const membershipId = (data.id as string) || "";
   const productId = (data.product_id as string) || product?.id || "";
   const companyId = (data.company_id as string) || company?.id || "";
   const visitorId = (data.user_id as string) || user?.id || "";
   const userEmail = (data.email as string) || user?.email || null;
-  // member_id is needed for one-click payments
-  const memberId = (data.member_id as string) || membershipId;
+  // member_id is needed for one-click payments (mber_xxx format)
+  const memberId = (data.member_id as string) || member?.id || membershipId;
 
   console.log("Membership activated parsed:", { membershipId, memberId, productId, companyId, visitorId });
 
@@ -273,25 +274,30 @@ async function handleMembershipActivated(data: Record<string, unknown>): Promise
 
   // Skip if this is our Stacker company
   if (companyId === STACKER_COMPANY_ID) {
+    console.log("Skipping our own Stacker company");
     return;
   }
 
   // Get the community owner
+  console.log("Looking up owner for company:", companyId);
   const owner = await getUserByWhopCompanyId(companyId);
   if (!owner) {
     console.log("Owner not found for company:", companyId);
     return;
   }
+  console.log("Found owner:", owner.id, "flowConfig:", JSON.stringify(owner.flowConfig));
 
   // Check if upsell flow can run
   const flowCheck = await canRunUpsellFlow(owner.id);
+  console.log("Flow check result:", flowCheck);
   if (!flowCheck.allowed) {
     console.log("Upsell flow not available:", flowCheck.reason);
     return;
   }
 
   // Check if this is the trigger product
-  if (owner.flowConfig.triggerProductId !== productId) {
+  console.log("Comparing trigger product:", owner.flowConfig?.triggerProductId, "vs purchased:", productId);
+  if (owner.flowConfig?.triggerProductId !== productId) {
     console.log("Not the trigger product, skipping");
     return;
   }
