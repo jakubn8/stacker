@@ -656,7 +656,7 @@ export default function EditorPage() {
 
                         <div className="bg-zinc-800/50 border border-zinc-700 rounded-md p-1.5 mb-1.5">
                           {upsellProductData ? (
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                               {/* Image */}
                               {upsellProductData.imageUrl ? (
                                 <img src={upsellProductData.imageUrl} alt={upsellProductData.title} className="w-full aspect-video rounded-md object-cover border border-zinc-700" />
@@ -668,7 +668,7 @@ export default function EditorPage() {
                                 </div>
                               )}
                               {/* Title & Description */}
-                              <div>
+                              <div className="pt-0.5">
                                 <h2 className="text-[9px] font-semibold text-white">{upsellProductData.title}</h2>
                                 {upsellProductDescription && (
                                   <p className="text-zinc-400 text-[7px] line-clamp-1">{upsellProductDescription}</p>
@@ -757,7 +757,7 @@ export default function EditorPage() {
 
                         <div className="bg-zinc-800/50 border border-orange-500/20 rounded-md p-1.5 mb-1.5">
                           {downsellProductData ? (
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                               {/* Image */}
                               {downsellProductData.imageUrl ? (
                                 <img src={downsellProductData.imageUrl} alt={downsellProductData.title} className="w-full aspect-video rounded-md object-cover border border-orange-500/30" />
@@ -769,7 +769,7 @@ export default function EditorPage() {
                                 </div>
                               )}
                               {/* Title & Description */}
-                              <div>
+                              <div className="pt-0.5">
                                 <h2 className="text-[9px] font-semibold text-white">{downsellProductData.title}</h2>
                                 {downsellProductDescription && (
                                   <p className="text-zinc-400 text-[7px] line-clamp-1">{downsellProductDescription}</p>

@@ -203,7 +203,7 @@ function OfferPageContent() {
 
             {/* Product Display */}
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 sm:p-4 mb-4">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* Product Image */}
                 {activeOffer.product.imageUrl ? (
                   <img
@@ -219,7 +219,7 @@ function OfferPageContent() {
                   </div>
                 )}
                 {/* Product Info */}
-                <div>
+                <div className="pt-1">
                   <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
                   {activeOffer.settings.productDescription && (
                     <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
@@ -357,7 +357,7 @@ function OfferPageContent() {
 
             {/* Product Display */}
             <div className="bg-zinc-800/50 border border-orange-500/20 rounded-xl p-3 sm:p-4 mb-4">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* Product Image */}
                 {activeOffer.product.imageUrl ? (
                   <img
@@ -373,7 +373,7 @@ function OfferPageContent() {
                   </div>
                 )}
                 {/* Product Info */}
-                <div>
+                <div className="pt-1">
                   <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
                   {activeOffer.settings.productDescription && (
                     <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
