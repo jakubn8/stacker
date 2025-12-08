@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { whopsdk } from "@/lib/whop-sdk";
 import { verifyAuthFromRequest } from "@/lib/auth";
+import { getUserByWhopCompanyId } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     console.log(`Fetching products for company: ${companyId}, user: ${userId || "anonymous"}`);
 
+    // Check if we should filter hidden products (for customer-facing store)
+    const filterHidden = searchParams.get("filterHidden") === "true";
+    let hiddenProductIds: string[] = [];
+
+    if (filterHidden) {
+      // Get the company owner's hidden products settings
+      const owner = await getUserByWhopCompanyId(companyId);
+      if (owner) {
+        hiddenProductIds = owner.hiddenProductIds || [];
+      }
+    }
+
     // Get user's owned products (if authenticated)
     const ownedProductIds = new Set<string>();
     if (userId) {
@@ -88,6 +101,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       })) {
         // Skip the Stacker app product itself
         if (product.title.toLowerCase() === "stacker") {
+          continue;
+        }
+
+        // Skip hidden products (for customer-facing store)
+        if (filterHidden && hiddenProductIds.includes(product.id)) {
           continue;
         }
 

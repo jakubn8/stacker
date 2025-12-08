@@ -44,8 +44,8 @@ export default function ExperiencePage() {
         const expData = await expResponse.json();
         setCompanyId(expData.companyId);
 
-        // Fetch products for this company
-        const productsResponse = await fetch(`/api/products?companyId=${expData.companyId}`);
+        // Fetch products for this company (filter hidden products for customer view)
+        const productsResponse = await fetch(`/api/products?companyId=${expData.companyId}&filterHidden=true`);
         if (productsResponse.ok) {
           const productsData = await productsResponse.json();
           setProducts(productsData.products || []);

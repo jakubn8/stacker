@@ -7,6 +7,7 @@ import {
   updateFlowConfig,
   getNotificationSettings,
   updateNotificationSettings,
+  updateHiddenProducts,
   type OfferPageSettings,
   type FlowConfig,
   type NotificationSettings,
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       flowConfig: user.flowConfig,
       offerSettings,
       notificationSettings,
+      hiddenProductIds: user.hiddenProductIds || [],
     });
   } catch (error) {
     console.error("Get flow settings error:", error);
@@ -88,7 +90,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    let { whopUserId, companyId, flowConfig, upsellSettings, downsellSettings, notificationSettings } = body;
+    let { whopUserId, companyId, flowConfig, upsellSettings, downsellSettings, notificationSettings, hiddenProductIds } = body;
 
     // Try to verify authentication from token
     const authResult = await verifyAuthFromRequest(request);
@@ -141,6 +143,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Update notification settings if provided
     if (notificationSettings) {
       await updateNotificationSettings(user.id, notificationSettings as Partial<NotificationSettings>);
+    }
+
+    // Update hidden products if provided
+    if (hiddenProductIds !== undefined) {
+      await updateHiddenProducts(user.id, hiddenProductIds as string[]);
     }
 
     return NextResponse.json({

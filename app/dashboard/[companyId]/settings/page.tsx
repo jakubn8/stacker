@@ -503,18 +503,44 @@ export default function DashboardPage() {
     }
   };
 
-  const handleHideProduct = (productId: string) => {
-    setHiddenProductIds((prev) => new Set([...prev, productId]));
-    // TODO: Persist to database
+  const handleHideProduct = async (productId: string) => {
+    const newHiddenIds = [...hiddenProductIds, productId];
+    setHiddenProductIds(new Set(newHiddenIds));
+
+    // Save to database
+    try {
+      await fetch("/api/flow/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whopUserId,
+          companyId: realCompanyId || companyId,
+          hiddenProductIds: newHiddenIds,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save hidden products:", error);
+    }
   };
 
-  const handleUnhideProduct = (productId: string) => {
-    setHiddenProductIds((prev) => {
-      const next = new Set(prev);
-      next.delete(productId);
-      return next;
-    });
-    // TODO: Persist to database
+  const handleUnhideProduct = async (productId: string) => {
+    const newHiddenIds = [...hiddenProductIds].filter(id => id !== productId);
+    setHiddenProductIds(new Set(newHiddenIds));
+
+    // Save to database
+    try {
+      await fetch("/api/flow/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whopUserId,
+          companyId: realCompanyId || companyId,
+          hiddenProductIds: newHiddenIds,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save hidden products:", error);
+    }
   };
 
   // Filter products into visible and hidden
