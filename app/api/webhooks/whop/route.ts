@@ -467,13 +467,11 @@ async function checkAndSendUpsellNotification(params: {
     console.log("Sending notification via experience:", experienceId);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (whopsdk.notifications as any).sendPushNotification({
-      userIds: [buyerUserId],
-      experienceId: experienceId,
+    await (whopsdk.notifications as any).create({
+      experience_id: experienceId,
       title: notificationSettings.title,
       content: notificationSettings.content,
-      // Deep link to the offer page - this opens inside the Whop app
-      restPath: `/experience/offer?token=${encodeURIComponent(token)}`,
+      user_ids: [buyerUserId],
     });
 
     console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId);
