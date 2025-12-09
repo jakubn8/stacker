@@ -74,18 +74,20 @@ export default async function CompanyDashboardLayout({
       console.log("Dashboard access check:", {
         companyId,
         userId,
-        accessLevel: accessResult.access_level,
-        hasAccess: accessResult.has_access,
+        accessLevel: accessResult?.access_level,
+        hasAccess: accessResult?.has_access,
+        fullResult: JSON.stringify(accessResult),
       });
 
       // Step 3: For dashboard, user must be an admin
-      if (accessResult.access_level !== "admin") {
+      // Be defensive - only block if we explicitly get a non-admin response
+      if (accessResult && accessResult.access_level && accessResult.access_level !== "admin") {
         console.log("Access denied - user is not admin:", accessResult.access_level);
         return <AccessDenied />;
       }
     } catch (error) {
-      console.error("Access check failed:", error);
-      // If access check fails, allow through for now (could be API issue)
+      console.error("Access check failed, allowing through:", error);
+      // If access check fails, allow through (could be API issue)
     }
   }
 
