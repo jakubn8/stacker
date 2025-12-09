@@ -71,8 +71,16 @@ export default async function CompanyDashboardLayout({
         id: userId,
       });
 
+      console.log("Dashboard access check:", {
+        companyId,
+        userId,
+        accessLevel: accessResult.access_level,
+        hasAccess: accessResult.has_access,
+      });
+
       // Step 3: For dashboard, user must be an admin
       if (accessResult.access_level !== "admin") {
+        console.log("Access denied - user is not admin:", accessResult.access_level);
         return <AccessDenied />;
       }
     } catch (error) {
