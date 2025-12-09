@@ -1612,40 +1612,19 @@ export default function DashboardPage() {
 
                     {/* Notification Settings for this flow */}
                     <div className="mt-6 pt-6 border-t border-zinc-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-white">Push Notification</h4>
-                            <p className="text-xs text-zinc-500">Sent when this flow triggers</p>
-                          </div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                          </svg>
                         </div>
-                        <div
-                          onClick={() => handleNotificationsEnabledChange(flowId, !flow.notificationsEnabled)}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <span className="text-xs text-zinc-400 hidden sm:inline">
-                            {flow.notificationsEnabled ? "On" : "Off"}
-                          </span>
-                          <div
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                              flow.notificationsEnabled ? "bg-blue-500" : "bg-zinc-600"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                flow.notificationsEnabled ? "translate-x-5" : "translate-x-1"
-                              }`}
-                            />
-                          </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-white">Push Notification</h4>
+                          <p className="text-xs text-zinc-500">Sent to buyer when this flow triggers</p>
                         </div>
                       </div>
 
-                      <div className={`space-y-3 ${!flow.notificationsEnabled ? "opacity-50 pointer-events-none" : ""}`}>
+                      <div className="space-y-3">
                         <div>
                           <label className="block text-xs font-medium text-zinc-400 mb-1.5">Title</label>
                           <input

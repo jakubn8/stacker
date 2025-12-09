@@ -351,10 +351,18 @@ export async function updateFlow(
   // Get current flows (with migration)
   const currentFlows = migrateUserToFlows(user);
 
+  // Filter out undefined values from updates to avoid overwriting with undefined
+  const filteredUpdates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) {
+      filteredUpdates[key] = value;
+    }
+  }
+
   // Update the specific flow
   const updatedFlow = {
     ...currentFlows[flowId],
-    ...updates,
+    ...filteredUpdates,
   };
 
   const updatedFlows = {

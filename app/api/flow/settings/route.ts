@@ -143,13 +143,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const targetFlowId: FlowId = (flowId as FlowId) || "flow1";
 
     // Update flow config if provided (isActive, triggerProductId, upsellProductId, downsellProductId)
+    // Only include fields that are explicitly provided (not undefined)
     if (flowConfig) {
-      await updateFlow(user.id, targetFlowId, {
-        isActive: flowConfig.isActive,
-        triggerProductId: flowConfig.triggerProductId,
-        upsellProductId: flowConfig.upsellProductId,
-        downsellProductId: flowConfig.downsellProductId,
-      });
+      const flowUpdates: Record<string, unknown> = {};
+      if (flowConfig.isActive !== undefined) flowUpdates.isActive = flowConfig.isActive;
+      if (flowConfig.triggerProductId !== undefined) flowUpdates.triggerProductId = flowConfig.triggerProductId;
+      if (flowConfig.upsellProductId !== undefined) flowUpdates.upsellProductId = flowConfig.upsellProductId;
+      if (flowConfig.downsellProductId !== undefined) flowUpdates.downsellProductId = flowConfig.downsellProductId;
+
+      if (Object.keys(flowUpdates).length > 0) {
+        await updateFlow(user.id, targetFlowId, flowUpdates);
+      }
     }
 
     // Update upsell settings if provided
