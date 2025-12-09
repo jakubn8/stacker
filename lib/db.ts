@@ -48,6 +48,25 @@ export interface NotificationSettings {
   enabled: boolean;
 }
 
+// Single upsell flow with all its config
+export interface UpsellFlow {
+  isActive: boolean;
+  triggerProductId: string | null;
+  upsellProductId: string | null;
+  downsellProductId: string | null;
+  notificationSettings: NotificationSettings;
+  offerSettings: FlowOfferSettings;
+}
+
+// All flows for a user (up to 3)
+export interface UserFlows {
+  flow1: UpsellFlow;
+  flow2: UpsellFlow;
+  flow3: UpsellFlow;
+}
+
+export type FlowId = "flow1" | "flow2" | "flow3";
+
 export interface AnalyticsData {
   totalViews: number;
   totalConversions: number;
@@ -75,6 +94,9 @@ export interface User {
   totalRevenueGeneratedCents: number;
   // Analytics tracking
   analytics: AnalyticsData;
+  // NEW: Multiple upsell flows (up to 3)
+  flows?: UserFlows;
+  // Legacy fields - kept for backwards compatibility during migration
   flowConfig: FlowConfig;
   offerSettings: FlowOfferSettings;
   notificationSettings: NotificationSettings;
@@ -217,6 +239,294 @@ const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enabled: true,
 };
 
+// Default single upsell flow
+const DEFAULT_UPSELL_FLOW: UpsellFlow = {
+  isActive: false,
+  triggerProductId: null,
+  upsellProductId: null,
+  downsellProductId: null,
+  notificationSettings: { ...DEFAULT_NOTIFICATION_SETTINGS },
+  offerSettings: { ...DEFAULT_OFFER_SETTINGS },
+};
+
+// Default flows structure (3 flows)
+const DEFAULT_FLOWS: UserFlows = {
+  flow1: { ...DEFAULT_UPSELL_FLOW },
+  flow2: { ...DEFAULT_UPSELL_FLOW },
+  flow3: { ...DEFAULT_UPSELL_FLOW },
+};
+
+/**
+ * Create a fresh UpsellFlow with default values
+ */
+export function createDefaultFlow(): UpsellFlow {
+  return {
+    isActive: false,
+    triggerProductId: null,
+    upsellProductId: null,
+    downsellProductId: null,
+    notificationSettings: {
+      title: "🎁 Wait! Your order isn't complete...",
+      content: "You unlocked an exclusive offer! Tap to claim it now.",
+      enabled: true,
+    },
+    offerSettings: {
+      upsell: { ...DEFAULT_UPSELL_SETTINGS },
+      downsell: { ...DEFAULT_DOWNSELL_SETTINGS },
+    },
+  };
+}
+
+/**
+ * Migrate legacy user data to new flows structure
+ * Copies existing flowConfig, notificationSettings, and offerSettings to flow1
+ */
+export function migrateUserToFlows(user: User): UserFlows {
+  // If user already has flows, return them
+  if (user.flows) {
+    return user.flows;
+  }
+
+  // Create default flows
+  const flows: UserFlows = {
+    flow1: createDefaultFlow(),
+    flow2: createDefaultFlow(),
+    flow3: createDefaultFlow(),
+  };
+
+  // Migrate legacy data to flow1
+  if (user.flowConfig) {
+    flows.flow1.isActive = user.flowConfig.isActive;
+    flows.flow1.triggerProductId = user.flowConfig.triggerProductId;
+    flows.flow1.upsellProductId = user.flowConfig.upsellProductId;
+    flows.flow1.downsellProductId = user.flowConfig.downsellProductId;
+  }
+
+  if (user.notificationSettings) {
+    flows.flow1.notificationSettings = { ...user.notificationSettings };
+  }
+
+  if (user.offerSettings) {
+    flows.flow1.offerSettings = {
+      upsell: { ...user.offerSettings.upsell },
+      downsell: { ...user.offerSettings.downsell },
+    };
+  }
+
+  return flows;
+}
+
+/**
+ * Get user's flows, migrating from legacy format if needed
+ * This is the main function to use when accessing flows
+ */
+export async function getUserFlows(userId: string): Promise<UserFlows | null> {
+  const user = await getUser(userId);
+  if (!user) return null;
+
+  return migrateUserToFlows(user);
+}
+
+/**
+ * Get a specific flow by ID
+ */
+export async function getFlow(userId: string, flowId: FlowId): Promise<UpsellFlow | null> {
+  const flows = await getUserFlows(userId);
+  if (!flows) return null;
+
+  return flows[flowId];
+}
+
+/**
+ * Update a specific flow's config (trigger, upsell, downsell products, isActive)
+ */
+export async function updateFlow(
+  userId: string,
+  flowId: FlowId,
+  updates: Partial<Omit<UpsellFlow, "notificationSettings" | "offerSettings">>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  // Get current flows (with migration)
+  const currentFlows = migrateUserToFlows(user);
+
+  // Update the specific flow
+  const updatedFlow = {
+    ...currentFlows[flowId],
+    ...updates,
+  };
+
+  const updatedFlows = {
+    ...currentFlows,
+    [flowId]: updatedFlow,
+  };
+
+  // Save to database
+  await db.collection("users").doc(userId).update({
+    flows: updatedFlows,
+    // Also update legacy flowConfig for backwards compatibility (flow1 only)
+    ...(flowId === "flow1" ? {
+      flowConfig: {
+        isActive: updatedFlow.isActive,
+        triggerProductId: updatedFlow.triggerProductId,
+        upsellProductId: updatedFlow.upsellProductId,
+        downsellProductId: updatedFlow.downsellProductId,
+      },
+    } : {}),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Update a flow's notification settings
+ */
+export async function updateFlowNotificationSettings(
+  userId: string,
+  flowId: FlowId,
+  settings: Partial<NotificationSettings>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const currentFlows = migrateUserToFlows(user);
+  const currentSettings = currentFlows[flowId].notificationSettings;
+
+  const updatedFlows = {
+    ...currentFlows,
+    [flowId]: {
+      ...currentFlows[flowId],
+      notificationSettings: {
+        ...currentSettings,
+        ...settings,
+      },
+    },
+  };
+
+  await db.collection("users").doc(userId).update({
+    flows: updatedFlows,
+    // Also update legacy notificationSettings for backwards compatibility (flow1 only)
+    ...(flowId === "flow1" ? {
+      notificationSettings: {
+        ...currentSettings,
+        ...settings,
+      },
+    } : {}),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Update a flow's offer settings (upsell or downsell page content)
+ */
+export async function updateFlowOfferSettings(
+  userId: string,
+  flowId: FlowId,
+  type: "upsell" | "downsell",
+  settings: Partial<OfferPageSettings>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const currentFlows = migrateUserToFlows(user);
+  const currentOfferSettings = currentFlows[flowId].offerSettings;
+
+  const updatedOfferSettings = {
+    ...currentOfferSettings,
+    [type]: {
+      ...currentOfferSettings[type],
+      ...settings,
+    },
+  };
+
+  const updatedFlows = {
+    ...currentFlows,
+    [flowId]: {
+      ...currentFlows[flowId],
+      offerSettings: updatedOfferSettings,
+    },
+  };
+
+  await db.collection("users").doc(userId).update({
+    flows: updatedFlows,
+    // Also update legacy offerSettings for backwards compatibility (flow1 only)
+    ...(flowId === "flow1" ? {
+      offerSettings: updatedOfferSettings,
+    } : {}),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Find a matching flow for a given trigger product ID
+ * Returns the first active flow whose trigger matches the product
+ */
+export function findMatchingFlow(
+  flows: UserFlows,
+  triggerProductId: string
+): { flowId: FlowId; flow: UpsellFlow } | null {
+  const flowIds: FlowId[] = ["flow1", "flow2", "flow3"];
+
+  for (const flowId of flowIds) {
+    const flow = flows[flowId];
+    if (flow.isActive && flow.triggerProductId === triggerProductId) {
+      return { flowId, flow };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if any flow can run for a user
+ * Returns the matching flow if found
+ */
+export async function canRunAnyUpsellFlow(
+  userId: string,
+  triggerProductId: string
+): Promise<{
+  allowed: boolean;
+  reason?: string;
+  flowId?: FlowId;
+  flow?: UpsellFlow;
+}> {
+  const user = await getUser(userId);
+  if (!user) {
+    return { allowed: false, reason: "User not found" };
+  }
+
+  // Check if locked out
+  const isLockedOut = await checkAndEnforceLockout(userId);
+  if (isLockedOut) {
+    return { allowed: false, reason: "Account locked due to unpaid billing" };
+  }
+
+  // Check if payment method is connected
+  if (!user.paymentMethodConnected) {
+    return { allowed: false, reason: "Payment method not connected" };
+  }
+
+  // Get flows (with migration)
+  const flows = migrateUserToFlows(user);
+
+  // Find matching flow
+  const match = findMatchingFlow(flows, triggerProductId);
+  if (!match) {
+    return { allowed: false, reason: "No matching active flow for this product" };
+  }
+
+  // Check if flow is properly configured
+  if (!match.flow.upsellProductId) {
+    return { allowed: false, reason: "Upsell flow not configured" };
+  }
+
+  return {
+    allowed: true,
+    flowId: match.flowId,
+    flow: match.flow,
+  };
+}
+
 export async function createUser(data: {
   whopCompanyId: string;
   whopMemberId?: string; // Optional - will use whopUserId as fallback
@@ -246,6 +556,13 @@ export async function createUser(data: {
       weeklyRevenueGeneratedCents: 0,
       lastResetAt: now,
     },
+    // New flows structure
+    flows: {
+      flow1: createDefaultFlow(),
+      flow2: createDefaultFlow(),
+      flow3: createDefaultFlow(),
+    },
+    // Legacy fields for backwards compatibility
     flowConfig: DEFAULT_FLOW_CONFIG,
     offerSettings: DEFAULT_OFFER_SETTINGS,
     notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,

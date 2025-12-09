@@ -5,6 +5,15 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import DashboardNav from "@/components/DashboardNav";
 
+// Flow types
+type FlowId = "flow1" | "flow2" | "flow3";
+
+const FLOW_LABELS: Record<FlowId, string> = {
+  flow1: "Upsell Flow 1",
+  flow2: "Upsell Flow 2",
+  flow3: "Upsell Flow 3",
+};
+
 interface OfferSettings {
   headline: string;
   subheadline: string;
@@ -50,6 +59,10 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Flow selector state
+  const [selectedFlow, setSelectedFlow] = useState<FlowId>("flow1");
+  const [availableFlows, setAvailableFlows] = useState<FlowId[]>(["flow1"]);
 
   // Product type toggle (upsell vs downsell)
   const [activeProduct, setActiveProduct] = useState<"upsell" | "downsell">("upsell");
@@ -133,42 +146,73 @@ export default function EditorPage() {
       if (settingsResponse.ok) {
         const data = await settingsResponse.json();
 
-        if (data.flowConfig) {
+        // Get all flows and determine which are available
+        if (data.flows) {
+          const activeFlows: FlowId[] = [];
+          (["flow1", "flow2", "flow3"] as FlowId[]).forEach((flowId) => {
+            const flow = data.flows[flowId];
+            if (flow?.isActive || flow?.triggerProductId) {
+              activeFlows.push(flowId);
+            }
+          });
+          // Always include at least flow1
+          if (activeFlows.length === 0) activeFlows.push("flow1");
+          setAvailableFlows(activeFlows);
+
+          // Auto-select first active flow
+          if (!activeFlows.includes(selectedFlow)) {
+            setSelectedFlow(activeFlows[0]);
+          }
+        }
+
+        // Load settings from the selected flow
+        const currentFlow = data.flows?.[selectedFlow];
+        if (currentFlow) {
+          setFlowConfig({
+            isActive: currentFlow.isActive || false,
+            triggerProductId: currentFlow.triggerProductId || null,
+            upsellProductId: currentFlow.upsellProductId || null,
+            downsellProductId: currentFlow.downsellProductId || null,
+          });
+
+          // Load upsell settings from flow
+          const upsell = currentFlow.offerSettings?.upsell;
+          if (upsell) {
+            setUpsellHeadline(upsell.headline || "Wait! Your order isn't complete...");
+            setUpsellSubheadline(upsell.subheadline || "Add this exclusive offer to your purchase");
+            setUpsellButtonText(upsell.buttonText || "Yes, Upgrade My Order");
+            if (upsell.bulletPoints?.length >= 1) setUpsellBullet1(upsell.bulletPoints[0] || "");
+            if (upsell.bulletPoints?.length >= 2) setUpsellBullet2(upsell.bulletPoints[1] || "");
+            if (upsell.bulletPoints?.length >= 3) setUpsellBullet3(upsell.bulletPoints[2] || "");
+            setUpsellShowSocialProof(upsell.showSocialProof ?? true);
+            setUpsellReviewText(upsell.reviewText || "");
+            setUpsellAuthorName(upsell.reviewAuthor || "");
+            setUpsellStarRating(upsell.reviewStars ?? 5);
+            if (upsell.showDiscountPrice !== undefined) setUpsellShowDiscountPrice(upsell.showDiscountPrice);
+            if (upsell.discountPrice !== undefined) setUpsellDiscountPrice(upsell.discountPrice);
+            if (upsell.productDescription !== undefined) setUpsellProductDescription(upsell.productDescription);
+          }
+
+          // Load downsell settings from flow
+          const downsell = currentFlow.offerSettings?.downsell;
+          if (downsell) {
+            setDownsellHeadline(downsell.headline || "Before you go...");
+            setDownsellSubheadline(downsell.subheadline || "Here's a special offer just for you");
+            setDownsellButtonText(downsell.buttonText || "Yes, I Want This Deal");
+            if (downsell.bulletPoints?.length >= 1) setDownsellBullet1(downsell.bulletPoints[0] || "");
+            if (downsell.bulletPoints?.length >= 2) setDownsellBullet2(downsell.bulletPoints[1] || "");
+            if (downsell.bulletPoints?.length >= 3) setDownsellBullet3(downsell.bulletPoints[2] || "");
+            setDownsellShowSocialProof(downsell.showSocialProof ?? true);
+            setDownsellReviewText(downsell.reviewText || "");
+            setDownsellAuthorName(downsell.reviewAuthor || "");
+            setDownsellStarRating(downsell.reviewStars ?? 5);
+            if (downsell.showDiscountPrice !== undefined) setDownsellShowDiscountPrice(downsell.showDiscountPrice);
+            if (downsell.discountPrice !== undefined) setDownsellDiscountPrice(downsell.discountPrice);
+            if (downsell.productDescription !== undefined) setDownsellProductDescription(downsell.productDescription);
+          }
+        } else if (data.flowConfig) {
+          // Fallback for legacy data
           setFlowConfig(data.flowConfig);
-        }
-
-        if (data.offerSettings?.upsell) {
-          const upsell = data.offerSettings.upsell;
-          setUpsellHeadline(upsell.headline);
-          setUpsellSubheadline(upsell.subheadline);
-          setUpsellButtonText(upsell.buttonText);
-          if (upsell.bulletPoints?.length >= 1) setUpsellBullet1(upsell.bulletPoints[0] || "");
-          if (upsell.bulletPoints?.length >= 2) setUpsellBullet2(upsell.bulletPoints[1] || "");
-          if (upsell.bulletPoints?.length >= 3) setUpsellBullet3(upsell.bulletPoints[2] || "");
-          setUpsellShowSocialProof(upsell.showSocialProof);
-          setUpsellReviewText(upsell.reviewText);
-          setUpsellAuthorName(upsell.reviewAuthor);
-          setUpsellStarRating(upsell.reviewStars);
-          if (upsell.showDiscountPrice !== undefined) setUpsellShowDiscountPrice(upsell.showDiscountPrice);
-          if (upsell.discountPrice !== undefined) setUpsellDiscountPrice(upsell.discountPrice);
-          if (upsell.productDescription !== undefined) setUpsellProductDescription(upsell.productDescription);
-        }
-
-        if (data.offerSettings?.downsell) {
-          const downsell = data.offerSettings.downsell;
-          setDownsellHeadline(downsell.headline);
-          setDownsellSubheadline(downsell.subheadline);
-          setDownsellButtonText(downsell.buttonText);
-          if (downsell.bulletPoints?.length >= 1) setDownsellBullet1(downsell.bulletPoints[0] || "");
-          if (downsell.bulletPoints?.length >= 2) setDownsellBullet2(downsell.bulletPoints[1] || "");
-          if (downsell.bulletPoints?.length >= 3) setDownsellBullet3(downsell.bulletPoints[2] || "");
-          setDownsellShowSocialProof(downsell.showSocialProof);
-          setDownsellReviewText(downsell.reviewText);
-          setDownsellAuthorName(downsell.reviewAuthor);
-          setDownsellStarRating(downsell.reviewStars);
-          if (downsell.showDiscountPrice !== undefined) setDownsellShowDiscountPrice(downsell.showDiscountPrice);
-          if (downsell.discountPrice !== undefined) setDownsellDiscountPrice(downsell.discountPrice);
-          if (downsell.productDescription !== undefined) setDownsellProductDescription(downsell.productDescription);
         }
       }
 
@@ -184,11 +228,16 @@ export default function EditorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [whopUserId, companyId, realCompanyId]);
+  }, [whopUserId, companyId, realCompanyId, selectedFlow]);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  // Reload settings when flow changes
+  const handleFlowChange = (flowId: FlowId) => {
+    setSelectedFlow(flowId);
+  };
 
   // Get current product values based on active selection
   const headline = activeProduct === "upsell" ? upsellHeadline : downsellHeadline;
@@ -259,6 +308,7 @@ export default function EditorPage() {
         body: JSON.stringify({
           whopUserId,
           companyId: realCompanyId || companyId,
+          flowId: selectedFlow,
           upsellSettings,
           downsellSettings,
         }),
@@ -868,6 +918,35 @@ export default function EditorPage() {
               )}
             </button>
           </div>
+
+          {/* Flow Selector */}
+          {availableFlows.length > 1 && (
+            <div className="mb-4">
+              <label className="text-sm font-medium text-zinc-300 block mb-2">Editing Flow</label>
+              <div className="relative">
+                <select
+                  value={selectedFlow}
+                  onChange={(e) => handleFlowChange(e.target.value as FlowId)}
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  {availableFlows.map((flowId) => (
+                    <option key={flowId} value={flowId}>
+                      {FLOW_LABELS[flowId]}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-500 mt-1.5">
+                Configure upsell flows in your dashboard settings.
+              </p>
+            </div>
+          )}
+
           <p className="text-zinc-400 text-sm max-sm:text-xs">
             Customize your {activeProduct} offer. Changes appear instantly in the preview.
           </p>

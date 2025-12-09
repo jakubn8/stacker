@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { whopsdk, STACKER_COMPANY_ID } from "@/lib/whop-sdk";
-import { getUserByWhopCompanyId, canRunUpsellFlow } from "@/lib/db";
+import { STACKER_COMPANY_ID } from "@/lib/whop-sdk";
+import { getUserByWhopCompanyId, canRunAnyUpsellFlow } from "@/lib/db";
 import { generateOfferToken } from "@/lib/offer-tokens";
 
 export const dynamic = "force-dynamic";
@@ -47,33 +47,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.redirect(`https://whop.com/hub/${companyId}`);
     }
 
-    // Check if upsell flow can run
-    const flowCheck = await canRunUpsellFlow(owner.id);
-    if (!flowCheck.allowed) {
+    // Check if any upsell flow can run for this product
+    const flowCheck = await canRunAnyUpsellFlow(owner.id, productId);
+    if (!flowCheck.allowed || !flowCheck.flowId) {
       console.log("Upsell flow not available:", flowCheck.reason);
       return NextResponse.redirect(`https://whop.com/hub/${companyId}`);
     }
 
-    // Check if this is the trigger product
-    if (owner.flowConfig.triggerProductId !== productId) {
-      console.log("Not the trigger product, redirecting to community");
-      return NextResponse.redirect(`https://whop.com/hub/${companyId}`);
-    }
-
-    // Generate the offer token (includes member_id for one-click payments)
+    // Generate the offer token with the matching flowId
     const token = generateOfferToken({
       buyerUserId: userId,
       buyerEmail: email,
       buyerMemberId: memberId,
       companyId: companyId,
       triggerProductId: productId,
+      flowId: flowCheck.flowId,
     });
 
     // Redirect to the offer page
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://stacker.app";
     const offerUrl = `${baseUrl}/experience/offer?token=${encodeURIComponent(token)}`;
 
-    console.log("Redirecting to offer page:", offerUrl);
+    console.log("Redirecting to offer page:", offerUrl, "for flow:", flowCheck.flowId);
     return NextResponse.redirect(offerUrl);
   } catch (error) {
     console.error("Checkout success handler error:", error);

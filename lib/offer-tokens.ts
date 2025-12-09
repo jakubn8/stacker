@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import type { FlowId } from "./db";
 
 const SECRET = process.env.CRON_SECRET || "default-secret-change-in-production";
 const TOKEN_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
@@ -11,6 +12,8 @@ export interface OfferTokenPayload {
   // Context
   companyId: string;
   triggerProductId: string;
+  // Flow identifier (which upsell flow to use)
+  flowId: FlowId;
   // Metadata
   createdAt: number;
   expiresAt: number;
@@ -26,6 +29,7 @@ export function generateOfferToken(data: {
   buyerMemberId: string;
   companyId: string;
   triggerProductId: string;
+  flowId: FlowId;
 }): string {
   const now = Date.now();
   const payload: OfferTokenPayload = {
@@ -34,6 +38,7 @@ export function generateOfferToken(data: {
     buyerMemberId: data.buyerMemberId,
     companyId: data.companyId,
     triggerProductId: data.triggerProductId,
+    flowId: data.flowId,
     createdAt: now,
     expiresAt: now + TOKEN_EXPIRY_MS,
   };
@@ -103,6 +108,7 @@ export function generateOfferUrl(
     buyerMemberId: string;
     companyId: string;
     triggerProductId: string;
+    flowId: FlowId;
   }
 ): string {
   const token = generateOfferToken(tokenData);

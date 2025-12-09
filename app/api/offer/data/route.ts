@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyOfferToken } from "@/lib/offer-tokens";
-import { getUserByWhopCompanyId, recordUpsellView } from "@/lib/db";
+import { getUserByWhopCompanyId, recordUpsellView, migrateUserToFlows } from "@/lib/db";
 import { whopsdk } from "@/lib/whop-sdk";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/offer/data?token=xxx
  * Fetches the offer data for a customer based on their secure token
+ * Now supports multiple flows - uses flowId from token to get correct products
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -39,8 +40,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Get flows (with migration for legacy users)
+    const flows = migrateUserToFlows(owner);
+
+    // Get the specific flow from the token
+    // For backwards compatibility, default to flow1 if no flowId in token
+    const flowId = payload.flowId || "flow1";
+    const flow = flows[flowId];
+
+    if (!flow) {
+      return NextResponse.json(
+        { error: "Flow not found", redirect: true },
+        { status: 400 }
+      );
+    }
+
     // Check if flow is active
-    if (!owner.flowConfig.isActive) {
+    if (!flow.isActive) {
       return NextResponse.json(
         { error: "Upsell flow is not active", redirect: true },
         { status: 400 }
@@ -48,16 +64,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Verify the trigger product matches
-    if (owner.flowConfig.triggerProductId !== payload.triggerProductId) {
+    if (flow.triggerProductId !== payload.triggerProductId) {
       return NextResponse.json(
         { error: "Product mismatch", redirect: true },
         { status: 400 }
       );
     }
 
-    // Fetch product data from Whop
-    const upsellProductId = owner.flowConfig.upsellProductId;
-    const downsellProductId = owner.flowConfig.downsellProductId;
+    // Get product IDs from the specific flow
+    const upsellProductId = flow.upsellProductId;
+    const downsellProductId = flow.downsellProductId;
 
     if (!upsellProductId) {
       return NextResponse.json(
@@ -111,7 +127,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             billingPeriod: downsellPlan.billing_period,
             isRecurring: !!downsellPlan.renewal_price,
           },
-          settings: owner.offerSettings.downsell,
+          // Use flow-specific offer settings
+          settings: flow.offerSettings.downsell,
         };
       }
     }
@@ -127,6 +144,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Token info for the accept flow
       buyerUserId: payload.buyerUserId,
       companyId: payload.companyId,
+      flowId: flowId,
       // Upsell data
       upsell: {
         product: {
@@ -141,7 +159,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           billingPeriod: upsellPlan.billing_period,
           isRecurring: !!upsellPlan.renewal_price,
         },
-        settings: owner.offerSettings.upsell,
+        // Use flow-specific offer settings
+        settings: flow.offerSettings.upsell,
       },
       // Downsell data (if configured)
       downsell: downsellData,

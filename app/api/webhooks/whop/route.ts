@@ -13,10 +13,12 @@ import {
   updateUserNextBillingDate,
   updateBillingStatus,
   incrementTotalRevenue,
-  canRunUpsellFlow,
+  canRunAnyUpsellFlow,
   recordUpsellConversion,
   hasNotificationBeenSent,
   recordSentNotification,
+  migrateUserToFlows,
+  type FlowId,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
 import { generateOfferToken } from "@/lib/offer-tokens";
@@ -256,6 +258,7 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
  * Handle membership.activated - when a user gains access to a product
  * This is the SINGLE source of truth for upsell notifications
  * Works for both free and paid products
+ * Now supports multiple upsell flows (up to 3)
  */
 async function handleMembershipActivated(data: Record<string, unknown>): Promise<void> {
   const product = data.product as { id?: string } | undefined;
@@ -284,22 +287,26 @@ async function handleMembershipActivated(data: Record<string, unknown>): Promise
     return;
   }
 
-  // Check if upsell flow is configured
-  if (!owner.flowConfig?.triggerProductId) {
-    console.log("No trigger product configured for this company");
+  // Check if any upsell flow can run for this product
+  const flowCheck = await canRunAnyUpsellFlow(owner.id, productId);
+
+  console.log("Flow check result:", {
+    purchasedProductId: productId,
+    allowed: flowCheck.allowed,
+    reason: flowCheck.reason,
+    matchingFlowId: flowCheck.flowId,
+  });
+
+  if (!flowCheck.allowed || !flowCheck.flowId || !flowCheck.flow) {
+    console.log("No matching upsell flow for this product:", flowCheck.reason);
     return;
   }
 
-  console.log("Trigger product check:", {
-    purchasedProductId: productId,
-    triggerProductId: owner.flowConfig.triggerProductId,
-    isMatch: productId === owner.flowConfig.triggerProductId,
-  });
-
-  // Check and send upsell notification if this is the trigger product
+  // Check and send upsell notification for the matching flow
   await checkAndSendUpsellNotification({
     ownerId: owner.id,
-    owner: owner,
+    flowId: flowCheck.flowId,
+    flow: flowCheck.flow,
     productId,
     buyerUserId,
     buyerEmail,
@@ -363,62 +370,57 @@ export async function handleStackerUpsellPurchase(data: {
 }
 
 /**
- * Check if purchase is a trigger product and send upsell notification
- * Called from handlePaymentSucceeded after recording the transaction
+ * Send upsell notification for a matched flow
+ * Called from handleMembershipActivated after flow matching
+ * Now uses flow-specific notification settings
  */
 async function checkAndSendUpsellNotification(params: {
   ownerId: string;
-  owner: { flowConfig: { isActive: boolean; triggerProductId: string | null }; notificationSettings?: { title: string; content: string; enabled: boolean } };
+  flowId: FlowId;
+  flow: {
+    notificationSettings: { title: string; content: string; enabled: boolean };
+    triggerProductId: string | null;
+  };
   productId: string;
   buyerUserId: string;
   buyerEmail: string | null;
   buyerMemberId: string;
   companyId: string;
 }): Promise<void> {
-  const { owner, productId, buyerUserId, buyerEmail, buyerMemberId, companyId } = params;
+  const { flowId, flow, productId, buyerUserId, buyerEmail, buyerMemberId, companyId } = params;
 
-  console.log("Checking upsell notification:", { productId, triggerProductId: owner.flowConfig?.triggerProductId });
+  console.log("Sending upsell notification for flow:", { flowId, productId });
 
-  // Check if upsell flow can run
-  const flowCheck = await canRunUpsellFlow(params.ownerId);
-  console.log("Flow check result:", flowCheck);
-  if (!flowCheck.allowed) {
-    console.log("Upsell flow not available:", flowCheck.reason);
-    return;
-  }
-
-  // Check if this is the trigger product
-  if (owner.flowConfig?.triggerProductId !== productId) {
-    console.log("Not the trigger product, skipping notification");
-    return;
-  }
-
-  // Check if notifications are enabled
-  const notificationSettings = owner.notificationSettings || {
+  // Check if notifications are enabled for this flow
+  const notificationSettings = flow.notificationSettings || {
     title: "🎁 Wait! Your order isn't complete...",
     content: "You unlocked an exclusive offer! Tap to claim it now.",
     enabled: true,
   };
 
   if (!notificationSettings.enabled) {
-    console.log("Notifications disabled for this owner, skipping");
+    console.log("Notifications disabled for this flow, skipping");
     return;
   }
 
-  // Check if we've already sent a notification to this user for this trigger
-  const alreadySent = await hasNotificationBeenSent(params.ownerId, buyerUserId, productId);
+  // Check if we've already sent a notification to this user for this trigger + flow combination
+  // Include flowId in the key to allow different flows to send notifications for same product
+  const notificationKey = `${flowId}_${productId}`;
+  const alreadySent = await hasNotificationBeenSent(params.ownerId, buyerUserId, notificationKey);
   if (alreadySent) {
-    console.log("Notification already sent to user for this trigger, skipping:", buyerUserId);
+    console.log("Notification already sent to user for this flow+trigger, skipping:", buyerUserId);
     return;
   }
 
   // Generate the offer token for the deep link
+  // Now includes flowId so the offer page knows which flow's products to show
   const token = generateOfferToken({
     buyerUserId,
     buyerEmail,
     buyerMemberId,
     companyId,
     triggerProductId: productId,
+    flowId,
   });
 
   // Send push notification via Whop API
@@ -433,9 +435,9 @@ async function checkAndSendUpsellNotification(params: {
     });
 
     // Record that we sent this notification to prevent duplicates
-    await recordSentNotification(params.ownerId, buyerUserId, productId);
+    await recordSentNotification(params.ownerId, buyerUserId, notificationKey);
 
-    console.log("Upsell notification sent to user:", buyerUserId);
+    console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId);
   } catch (error) {
     console.error("Failed to send upsell notification:", error);
   }

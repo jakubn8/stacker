@@ -2,15 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getUserByWhopUserId,
   createUser,
-  getOfferSettings,
-  updateOfferSettings,
-  updateFlowConfig,
-  getNotificationSettings,
-  updateNotificationSettings,
   updateHiddenProducts,
+  migrateUserToFlows,
+  updateFlow,
+  updateFlowNotificationSettings,
+  updateFlowOfferSettings,
   type OfferPageSettings,
-  type FlowConfig,
-  type NotificationSettings,
+  type FlowId,
 } from "@/lib/db";
 import { verifyAuthFromRequest } from "@/lib/auth";
 
@@ -18,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/flow/settings?whopUserId=xxx&companyId=biz_xxx
- * Returns flow config and offer settings for a user
+ * Returns all flows and settings for a user
  * Auto-creates user if not found
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -57,20 +55,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Return empty defaults if no companyId provided to create user
       return NextResponse.json({
         success: true,
+        flows: null,
+        // Legacy fields for backwards compatibility
         flowConfig: null,
         offerSettings: null,
         notificationSettings: null,
       });
     }
 
-    const offerSettings = await getOfferSettings(user.id);
-    const notificationSettings = await getNotificationSettings(user.id);
+    // Get all flows (with migration for legacy users)
+    const flows = migrateUserToFlows(user);
 
     return NextResponse.json({
       success: true,
+      // New: all flows
+      flows,
+      // Legacy fields for backwards compatibility with existing editor
       flowConfig: user.flowConfig,
-      offerSettings,
-      notificationSettings,
+      offerSettings: user.offerSettings,
+      notificationSettings: user.notificationSettings,
       hiddenProductIds: user.hiddenProductIds || [],
       productImages: user.productImages || {},
     });
@@ -86,12 +89,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 /**
  * POST /api/flow/settings
  * Save flow config and/or offer settings
- * Body: { whopUserId, companyId?, flowConfig?, upsellSettings?, downsellSettings? }
+ * Now supports flowId to update specific flow
+ * Body: { whopUserId, companyId?, flowId?, flowConfig?, upsellSettings?, downsellSettings?, notificationSettings?, hiddenProductIds? }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    let { whopUserId, companyId, flowConfig, upsellSettings, downsellSettings, notificationSettings, hiddenProductIds } = body;
+    let {
+      whopUserId,
+      companyId,
+      flowId,
+      flowConfig,
+      upsellSettings,
+      downsellSettings,
+      notificationSettings,
+      hiddenProductIds
+    } = body;
 
     // Try to verify authentication from token
     const authResult = await verifyAuthFromRequest(request);
@@ -126,27 +139,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Update flow config if provided
+    // Default to flow1 for backwards compatibility
+    const targetFlowId: FlowId = (flowId as FlowId) || "flow1";
+
+    // Update flow config if provided (isActive, triggerProductId, upsellProductId, downsellProductId)
     if (flowConfig) {
-      await updateFlowConfig(user.id, flowConfig as Partial<FlowConfig>);
+      await updateFlow(user.id, targetFlowId, {
+        isActive: flowConfig.isActive,
+        triggerProductId: flowConfig.triggerProductId,
+        upsellProductId: flowConfig.upsellProductId,
+        downsellProductId: flowConfig.downsellProductId,
+      });
     }
 
     // Update upsell settings if provided
     if (upsellSettings) {
-      await updateOfferSettings(user.id, "upsell", upsellSettings as Partial<OfferPageSettings>);
+      await updateFlowOfferSettings(user.id, targetFlowId, "upsell", upsellSettings as Partial<OfferPageSettings>);
     }
 
     // Update downsell settings if provided
     if (downsellSettings) {
-      await updateOfferSettings(user.id, "downsell", downsellSettings as Partial<OfferPageSettings>);
+      await updateFlowOfferSettings(user.id, targetFlowId, "downsell", downsellSettings as Partial<OfferPageSettings>);
     }
 
     // Update notification settings if provided
     if (notificationSettings) {
-      await updateNotificationSettings(user.id, notificationSettings as Partial<NotificationSettings>);
+      await updateFlowNotificationSettings(user.id, targetFlowId, notificationSettings);
     }
 
-    // Update hidden products if provided
+    // Update hidden products if provided (not flow-specific)
     if (hiddenProductIds !== undefined) {
       await updateHiddenProducts(user.id, hiddenProductIds as string[]);
     }

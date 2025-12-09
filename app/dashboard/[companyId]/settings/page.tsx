@@ -10,6 +10,37 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import DashboardNav from "@/components/DashboardNav";
 
+// Flow types
+type FlowId = "flow1" | "flow2" | "flow3";
+
+interface FlowState {
+  isActive: boolean;
+  triggerProductId: string;
+  upsellProductId: string;
+  downsellProductId: string;
+  hasDownsell: boolean;
+  notificationTitle: string;
+  notificationContent: string;
+  notificationsEnabled: boolean;
+}
+
+const DEFAULT_FLOW_STATE: FlowState = {
+  isActive: false,
+  triggerProductId: "",
+  upsellProductId: "",
+  downsellProductId: "",
+  hasDownsell: false,
+  notificationTitle: "🎁 Wait! Your order isn't complete...",
+  notificationContent: "You unlocked an exclusive offer! Tap to claim it now.",
+  notificationsEnabled: true,
+};
+
+interface FlowsState {
+  flow1: FlowState;
+  flow2: FlowState;
+  flow3: FlowState;
+}
+
 // Billing types
 interface BillingStatus {
   user: {
@@ -82,20 +113,17 @@ export default function DashboardPage() {
   // Get the whopUserId from auth context
   const whopUserId = authUser?.whopUserId || "";
 
-  // Flow configuration state
-  const [isActive, setIsActive] = useState(false);
-  const [triggerProduct, setTriggerProduct] = useState("");
-  const [upsellProduct, setUpsellProduct] = useState("");
-  const [hasDownsell, setHasDownsell] = useState(false);
-  const [downsellProduct, setDownsellProduct] = useState("");
+  // Multi-flow configuration state
+  const [flows, setFlows] = useState<FlowsState>({
+    flow1: { ...DEFAULT_FLOW_STATE },
+    flow2: { ...DEFAULT_FLOW_STATE },
+    flow3: { ...DEFAULT_FLOW_STATE },
+  });
   const [flowConfigLoading, setFlowConfigLoading] = useState(true);
-  const [flowSaving, setFlowSaving] = useState(false);
+  const [flowSaving, setFlowSaving] = useState<FlowId | null>(null);
 
-  // Notification settings state
-  const [notificationTitle, setNotificationTitle] = useState("🎁 Wait! Your order isn't complete...");
-  const [notificationContent, setNotificationContent] = useState("You unlocked an exclusive offer! Tap to claim it now.");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [notificationSaving, setNotificationSaving] = useState(false);
+  // Expanded flow accordions state
+  const [expandedFlows, setExpandedFlows] = useState<Set<FlowId>>(new Set(["flow1"]));
 
   // Payment method required modal
   const [showPaymentRequiredModal, setShowPaymentRequiredModal] = useState(false);
@@ -247,6 +275,24 @@ export default function DashboardPage() {
   }, [fetchProducts]);
 
   // Fetch flow config
+  // Helper to convert API flow to local FlowState
+  const apiFlowToState = (apiFlow: {
+    isActive: boolean;
+    triggerProductId: string | null;
+    upsellProductId: string | null;
+    downsellProductId: string | null;
+    notificationSettings?: { title?: string; content?: string; enabled?: boolean };
+  }): FlowState => ({
+    isActive: apiFlow.isActive || false,
+    triggerProductId: apiFlow.triggerProductId || "",
+    upsellProductId: apiFlow.upsellProductId || "",
+    downsellProductId: apiFlow.downsellProductId || "",
+    hasDownsell: !!apiFlow.downsellProductId,
+    notificationTitle: apiFlow.notificationSettings?.title || DEFAULT_FLOW_STATE.notificationTitle,
+    notificationContent: apiFlow.notificationSettings?.content || DEFAULT_FLOW_STATE.notificationContent,
+    notificationsEnabled: apiFlow.notificationSettings?.enabled !== false,
+  });
+
   const fetchFlowConfig = useCallback(async () => {
     try {
       setFlowConfigLoading(true);
@@ -254,25 +300,31 @@ export default function DashboardPage() {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.flowConfig) {
-          setIsActive(data.flowConfig.isActive || false);
-          setTriggerProduct(data.flowConfig.triggerProductId || "");
-          setUpsellProduct(data.flowConfig.upsellProductId || "");
-          setDownsellProduct(data.flowConfig.downsellProductId || "");
-          setHasDownsell(!!data.flowConfig.downsellProductId);
+
+        // Load all flows from API
+        if (data.flows) {
+          setFlows({
+            flow1: apiFlowToState(data.flows.flow1),
+            flow2: apiFlowToState(data.flows.flow2),
+            flow3: apiFlowToState(data.flows.flow3),
+          });
+
+          // Auto-expand flows that are active
+          const activeFlows: FlowId[] = [];
+          if (data.flows.flow1?.isActive) activeFlows.push("flow1");
+          if (data.flows.flow2?.isActive) activeFlows.push("flow2");
+          if (data.flows.flow3?.isActive) activeFlows.push("flow3");
+          if (activeFlows.length > 0) {
+            setExpandedFlows(new Set(activeFlows));
+          }
         }
+
         if (data.hiddenProductIds) {
           setHiddenProductIds(new Set(data.hiddenProductIds));
         }
         // Load product images
         if (data.productImages) {
           setProductImages(data.productImages);
-        }
-        // Load notification settings
-        if (data.notificationSettings) {
-          setNotificationTitle(data.notificationSettings.title || "🎁 Wait! Your order isn't complete...");
-          setNotificationContent(data.notificationSettings.content || "You unlocked an exclusive offer! Tap to claim it now.");
-          setNotificationsEnabled(data.notificationSettings.enabled !== false);
         }
       }
     } catch (error) {
@@ -286,49 +338,30 @@ export default function DashboardPage() {
     fetchFlowConfig();
   }, [fetchFlowConfig]);
 
-  // Save notification settings
-  const saveNotificationSettings = useCallback(async (settings: {
-    title?: string;
-    content?: string;
-    enabled?: boolean;
+  // Save flow config to database (with flowId)
+  const saveFlowConfig = useCallback(async (flowId: FlowId, updates: {
+    flowConfig?: {
+      isActive?: boolean;
+      triggerProductId?: string | null;
+      upsellProductId?: string | null;
+      downsellProductId?: string | null;
+    };
+    notificationSettings?: {
+      title?: string;
+      content?: string;
+      enabled?: boolean;
+    };
   }) => {
     try {
-      setNotificationSaving(true);
-      const response = await fetch("/api/notifications/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          whopUserId,
-          settings,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error("Failed to save notification settings");
-      }
-    } catch (error) {
-      console.error("Failed to save notification settings:", error);
-    } finally {
-      setNotificationSaving(false);
-    }
-  }, [whopUserId]);
-
-  // Save flow config to database
-  const saveFlowConfig = useCallback(async (config: {
-    isActive?: boolean;
-    triggerProductId?: string | null;
-    upsellProductId?: string | null;
-    downsellProductId?: string | null;
-  }) => {
-    try {
-      setFlowSaving(true);
+      setFlowSaving(flowId);
       const response = await fetch("/api/flow/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           whopUserId,
           companyId: realCompanyId || companyId,
-          flowConfig: config,
+          flowId,
+          ...updates,
         }),
       });
 
@@ -338,58 +371,92 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to save flow config:", error);
     } finally {
-      setFlowSaving(false);
+      setFlowSaving(null);
     }
   }, [whopUserId, companyId, realCompanyId]);
 
-  // Handlers that save to database
-  const handleSetIsActive = (active: boolean) => {
+  // Update flow state locally and save to database
+  const updateFlow = useCallback((flowId: FlowId, updates: Partial<FlowState>) => {
+    setFlows(prev => ({
+      ...prev,
+      [flowId]: { ...prev[flowId], ...updates }
+    }));
+  }, []);
+
+  // Toggle flow accordion
+  const toggleFlowExpanded = (flowId: FlowId) => {
+    setExpandedFlows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(flowId)) {
+        newSet.delete(flowId);
+      } else {
+        newSet.add(flowId);
+      }
+      return newSet;
+    });
+  };
+
+  // Flow handlers
+  const handleSetFlowActive = (flowId: FlowId, active: boolean) => {
     // Can't activate without a payment method
     if (active && !billingStatus?.user?.paymentMethodConnected) {
       setShowPaymentRequiredModal(true);
       return;
     }
-    setIsActive(active);
-    saveFlowConfig({ isActive: active });
+    // Can't activate if in lockout status
+    if (active && billingStatus?.billing?.status === "unpaid_lockout") {
+      // Don't allow activation - they need to pay first
+      return;
+    }
+    updateFlow(flowId, { isActive: active });
+    saveFlowConfig(flowId, { flowConfig: { isActive: active } });
   };
 
-  const handleSetTriggerProduct = (productId: string) => {
-    setTriggerProduct(productId);
-    saveFlowConfig({ triggerProductId: productId || null });
+  const handleSetTriggerProduct = (flowId: FlowId, productId: string) => {
+    updateFlow(flowId, { triggerProductId: productId });
+    saveFlowConfig(flowId, { flowConfig: { triggerProductId: productId || null } });
   };
 
-  const handleSetUpsellProduct = (productId: string) => {
-    setUpsellProduct(productId);
-    saveFlowConfig({ upsellProductId: productId || null });
+  const handleSetUpsellProduct = (flowId: FlowId, productId: string) => {
+    updateFlow(flowId, { upsellProductId: productId });
+    saveFlowConfig(flowId, { flowConfig: { upsellProductId: productId || null } });
   };
 
-  const handleSetDownsellProduct = (productId: string) => {
-    setDownsellProduct(productId);
-    saveFlowConfig({ downsellProductId: productId || null });
+  const handleSetDownsellProduct = (flowId: FlowId, productId: string) => {
+    updateFlow(flowId, { downsellProductId: productId });
+    saveFlowConfig(flowId, { flowConfig: { downsellProductId: productId || null } });
   };
 
-  const handleAddDownsell = () => {
-    setHasDownsell(true);
+  const handleAddDownsell = (flowId: FlowId) => {
+    updateFlow(flowId, { hasDownsell: true });
   };
 
-  // Notification settings handlers
-  const handleNotificationTitleChange = (value: string) => {
-    setNotificationTitle(value);
+  const handleRemoveDownsellForFlow = (flowId: FlowId) => {
+    updateFlow(flowId, { hasDownsell: false, downsellProductId: "" });
+    saveFlowConfig(flowId, { flowConfig: { downsellProductId: null } });
   };
 
-  const handleNotificationContentChange = (value: string) => {
-    setNotificationContent(value);
+  // Notification handlers for specific flow
+  const handleNotificationTitleChange = (flowId: FlowId, value: string) => {
+    updateFlow(flowId, { notificationTitle: value });
   };
 
-  const handleNotificationsEnabledChange = (enabled: boolean) => {
-    setNotificationsEnabled(enabled);
-    saveNotificationSettings({ enabled });
+  const handleNotificationContentChange = (flowId: FlowId, value: string) => {
+    updateFlow(flowId, { notificationContent: value });
   };
 
-  const handleSaveNotificationText = () => {
-    saveNotificationSettings({
-      title: notificationTitle,
-      content: notificationContent,
+  const handleNotificationsEnabledChange = (flowId: FlowId, enabled: boolean) => {
+    updateFlow(flowId, { notificationsEnabled: enabled });
+    saveFlowConfig(flowId, { notificationSettings: { enabled } });
+  };
+
+  const handleSaveNotificationText = (flowId: FlowId) => {
+    const flow = flows[flowId];
+    saveFlowConfig(flowId, {
+      notificationSettings: {
+        title: flow.notificationTitle,
+        content: flow.notificationContent,
+      }
     });
   };
 
@@ -614,10 +681,11 @@ export default function DashboardPage() {
   const visibleProducts = products.filter((p) => !hiddenProductIds.has(p.id));
   const hiddenProducts = products.filter((p) => hiddenProductIds.has(p.id));
 
-  const handleRemoveDownsell = () => {
-    setHasDownsell(false);
-    setDownsellProduct("");
-    saveFlowConfig({ downsellProductId: null });
+  // Flow display names
+  const flowNames: Record<FlowId, string> = {
+    flow1: "Upsell Flow 1",
+    flow2: "Upsell Flow 2",
+    flow3: "Upsell Flow 3",
   };
 
   return (
@@ -1285,56 +1353,38 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Upsell Flow Builder */}
-        <div className="space-y-0">
-          {/* Header */}
-          <div className="upsell-flow-header flex items-center justify-between gap-4 mb-6 max-sm:relative">
-            <div className="upsell-flow-title-section">
-              <h2 className="text-xl font-semibold text-white">Upsell Flow</h2>
-              <p className="upsell-flow-subtitle text-zinc-400 text-sm mt-1">
-                Build your post-purchase upsell sequence
+        {/* Upsell Flows Section */}
+        <div className="space-y-4">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Upsell Flows</h2>
+              <p className="text-zinc-400 text-sm mt-1">
+                Create up to 3 upsell flows for different products
               </p>
             </div>
-            <div className="upsell-flow-controls flex items-center gap-4">
-              <Link
-                href={`/dashboard/${companyId}/editor`}
-                onClick={handleEditorClick}
-                className="upsell-flow-edit-btn hidden sm:inline-flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit Offer Page
-              </Link>
-              <div className="upsell-flow-toggle flex items-center gap-3 max-sm:absolute max-sm:top-0 max-sm:right-0 max-sm:gap-2">
-                <span className="text-sm font-medium text-zinc-400">
-                  {isActive ? "Active" : "Inactive"}
-                </span>
-                <button
-                  onClick={() => handleSetIsActive(!isActive)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                    isActive ? "bg-green-500" : "bg-red-500/80"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isActive ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
+            <Link
+              href={`/dashboard/${companyId}/editor`}
+              onClick={handleEditorClick}
+              className="hidden sm:inline-flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Offer Pages
+            </Link>
           </div>
+
           {/* Mobile Edit Button */}
           <Link
             href={`/dashboard/${companyId}/editor`}
             onClick={handleEditorClick}
-            className="upsell-flow-edit-btn-mobile flex sm:hidden items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer mt-3 mb-6 w-full"
+            className="flex sm:hidden items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer w-full"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            Edit Offer Page
+            Edit Offer Pages
           </Link>
 
           {/* Editor Mobile Message */}
@@ -1345,244 +1395,288 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Step 1: The Trigger */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <div className="step-card-layout flex items-start gap-4">
-              <div className="step-card-icon flex-shrink-0 h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="step-card-content flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-purple-400 uppercase tracking-wide">Step 1</span>
-                  <span className="text-xs text-zinc-600">•</span>
-                  <span className="text-xs text-zinc-500">The Trigger</span>
-                </div>
-                <label className="text-sm font-medium text-white block mb-2">When this product is purchased...</label>
-                <Select
-                  placeholder="Select trigger product..."
-                  value={triggerProduct}
-                  onValueChange={handleSetTriggerProduct}
-                  size="md"
-                  items={productDropdownItems}
-                  className="step-card-select px-4 cursor-pointer"
-                  contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-purple-500 [&_svg]:hidden"
-                />
-              </div>
-            </div>
-          </div>
+          {/* Flow Accordions */}
+          {(["flow1", "flow2", "flow3"] as FlowId[]).map((flowId) => {
+            const flow = flows[flowId];
+            const isExpanded = expandedFlows.has(flowId);
+            const isSaving = flowSaving === flowId;
 
-          {/* Connector Line 1 */}
-          <div className="flex justify-start pl-9">
-            <div className="h-8 w-0.5 bg-zinc-700" />
-          </div>
-
-          {/* Step 2: Primary Upsell */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <div className="step-card-layout flex items-start gap-4">
-              <div className="step-card-icon flex-shrink-0 h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <div className="step-card-content flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-green-400 uppercase tracking-wide">Step 2</span>
-                  <span className="text-xs text-zinc-600">•</span>
-                  <span className="text-xs text-zinc-500">Primary Upsell</span>
-                </div>
-                <label className="text-sm font-medium text-white block mb-2">Show this product</label>
-                <Select
-                  placeholder="Select upsell product..."
-                  value={upsellProduct}
-                  onValueChange={handleSetUpsellProduct}
-                  size="md"
-                  items={productDropdownItems}
-                  className="step-card-select px-4 cursor-pointer"
-                  contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-green-500 [&_svg]:hidden"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Connector Line 2 with Label */}
-          <div className="flex items-center pl-9 gap-3">
-            <div className="h-8 w-0.5 bg-zinc-700" />
-            <div className="flex items-center gap-2 -ml-1">
-              <div className="h-0.5 w-4 bg-zinc-700" />
-              <span className="text-xs text-orange-400 bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
-                If user clicks &apos;No&apos;...
-              </span>
-            </div>
-          </div>
-
-          {/* Step 3: Downsell (Conditional) */}
-          {hasDownsell ? (
-            <div className="bg-zinc-900 border border-orange-500/30 rounded-xl p-5">
-              <div className="step-card-layout flex items-start gap-4">
-                <div className="step-card-icon flex-shrink-0 h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div className="step-card-content flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-orange-400 uppercase tracking-wide">Step 3</span>
-                      <span className="text-xs text-zinc-600">•</span>
-                      <span className="text-xs text-zinc-500">Downsell Offer</span>
-                    </div>
-                    <button
-                      onClick={handleRemoveDownsell}
-                      className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                  <label className="text-sm font-medium text-white block mb-2">Show this if they decline</label>
-                  <Select
-                    placeholder="Select downsell product..."
-                    value={downsellProduct}
-                    onValueChange={handleSetDownsellProduct}
-                    size="md"
-                    items={productDropdownItems}
-                    className="step-card-select px-4 cursor-pointer"
-                    contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-orange-500 [&_svg]:hidden"
-                  />
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Your second chance to convert — usually a lower-priced alternative.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={handleAddDownsell}
-              className="w-full border-2 border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl p-5 flex items-center justify-center gap-2 text-zinc-400 hover:text-zinc-300 transition-colors group cursor-pointer"
-            >
-              <svg className="w-5 h-5 text-zinc-500 group-hover:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span className="text-sm font-medium">Add Downsell Offer</span>
-            </button>
-          )}
-        </div>
-
-        {/* Notification Settings */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="p-6 border-b border-zinc-800">
-            <div className="notification-header flex items-center justify-between">
-              <div className="notification-header-left flex items-center gap-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-white">Push Notification</h2>
-                  <p className="text-zinc-400 text-sm mt-1">
-                    Customize the notification sent when a customer triggers your upsell flow
-                  </p>
-                </div>
-              </div>
-              <div className="notification-header-toggle flex items-center gap-3">
-                <span className="text-sm font-medium text-zinc-400">
-                  {notificationsEnabled ? "Enabled" : "Disabled"}
-                </span>
+            return (
+              <div
+                key={flowId}
+                className={`bg-zinc-900 border rounded-xl overflow-hidden transition-colors ${
+                  flow.isActive ? "border-green-500/30" : "border-zinc-800"
+                }`}
+              >
+                {/* Accordion Header */}
                 <button
-                  onClick={() => handleNotificationsEnabledChange(!notificationsEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                    notificationsEnabled ? "bg-blue-500" : "bg-zinc-600"
-                  }`}
+                  onClick={() => toggleFlowExpanded(flowId)}
+                  className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 hover:bg-zinc-800/50 transition-colors cursor-pointer"
                 >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      notificationsEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className={`p-6 space-y-4 ${!notificationsEnabled ? "opacity-50 pointer-events-none" : ""}`}>
-            {/* Title Input */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Notification Title
-              </label>
-              <input
-                type="text"
-                value={notificationTitle}
-                onChange={(e) => handleNotificationTitleChange(e.target.value)}
-                onBlur={handleSaveNotificationText}
-                placeholder="🎁 Wait! Your order isn't complete..."
-                maxLength={50}
-                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
-              />
-              <p className="text-xs text-zinc-500 mt-1.5">
-                {notificationTitle.length}/50 characters • Shows as the notification headline
-              </p>
-            </div>
-
-            {/* Content Input */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Notification Message
-              </label>
-              <textarea
-                value={notificationContent}
-                onChange={(e) => handleNotificationContentChange(e.target.value)}
-                onBlur={handleSaveNotificationText}
-                placeholder="You unlocked an exclusive offer! Tap to claim it now."
-                maxLength={100}
-                rows={2}
-                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
-              />
-              <p className="text-xs text-zinc-500 mt-1.5">
-                {notificationContent.length}/100 characters • Body text of the push notification
-              </p>
-            </div>
-
-            {/* Preview */}
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-zinc-300 mb-3">
-                Preview
-              </label>
-              <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">W</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-white text-sm font-semibold">Whop</span>
-                      <span className="text-zinc-500 text-xs">now</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center ${
+                      flow.isActive ? "bg-green-500/20" : "bg-zinc-800"
+                    }`}>
+                      <span className={`text-sm sm:text-base font-bold ${
+                        flow.isActive ? "text-green-400" : "text-zinc-500"
+                      }`}>
+                        {flowId.replace("flow", "")}
+                      </span>
                     </div>
-                    <p className="text-white text-sm font-medium truncate">{notificationTitle || "Notification Title"}</p>
-                    <p className="text-zinc-400 text-sm truncate">{notificationContent || "Notification message..."}</p>
+                    <div className="text-left min-w-0">
+                      <h3 className="text-white font-medium text-sm sm:text-base truncate">{flowNames[flowId]}</h3>
+                      <p className="text-zinc-500 text-xs sm:text-sm truncate">
+                        {flow.triggerProductId
+                          ? products.find(p => p.id === flow.triggerProductId)?.title || "Product selected"
+                          : "No trigger set"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <p className="text-xs text-zinc-500 mt-2 text-center">
-                This notification appears in the Whop app and as a push notification
-              </p>
-            </div>
-          </div>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    {isSaving && (
+                      <div className="h-4 w-4 border-2 border-zinc-600 border-t-green-500 rounded-full animate-spin" />
+                    )}
+                    {/* Active Toggle */}
+                    {(() => {
+                      const isToggleDisabled = billingStatus?.billing?.status === "unpaid_lockout" || !billingStatus?.user?.paymentMethodConnected;
+                      return (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isToggleDisabled || flow.isActive) {
+                              handleSetFlowActive(flowId, !flow.isActive);
+                            }
+                          }}
+                          className={`flex items-center gap-2 ${isToggleDisabled && !flow.isActive ? "opacity-50 cursor-not-allowed" : ""}`}
+                          title={isToggleDisabled && !flow.isActive ? (billingStatus?.billing?.status === "unpaid_lockout" ? "Pay outstanding balance to enable" : "Connect payment method to enable") : undefined}
+                        >
+                          <span className="text-xs sm:text-sm font-medium text-zinc-400 hidden sm:inline">
+                            {flow.isActive ? "Active" : "Inactive"}
+                          </span>
+                          <div
+                            className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${
+                              isToggleDisabled && !flow.isActive ? "cursor-not-allowed" : "cursor-pointer"
+                            } ${
+                              flow.isActive ? "bg-green-500" : isToggleDisabled ? "bg-zinc-600" : "bg-red-500/80"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                                flow.isActive ? "translate-x-5 sm:translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {/* Chevron */}
+                    <svg
+                      className={`w-5 h-5 text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
 
-          {/* Saving Indicator */}
-          {notificationSaving && (
-            <div className="px-6 pb-4">
-              <div className="flex items-center gap-2 text-zinc-400 text-sm">
-                <div className="h-4 w-4 border-2 border-zinc-600 border-t-blue-500 rounded-full animate-spin"></div>
-                Saving...
+                {/* Accordion Content */}
+                {isExpanded && (
+                  <div className="border-t border-zinc-800 p-4 sm:p-5 space-y-0">
+                    {/* Step 1: Trigger */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                      <div className="step-card-layout flex items-start gap-3 sm:gap-4">
+                        <div className="step-card-icon flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="step-card-content flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-purple-400 uppercase tracking-wide">Step 1</span>
+                            <span className="text-xs text-zinc-600">•</span>
+                            <span className="text-xs text-zinc-500">The Trigger</span>
+                          </div>
+                          <label className="text-sm font-medium text-white block mb-2">When this product is purchased...</label>
+                          <Select
+                            placeholder="Select trigger product..."
+                            value={flow.triggerProductId}
+                            onValueChange={(val) => handleSetTriggerProduct(flowId, val)}
+                            size="md"
+                            items={productDropdownItems}
+                            className="step-card-select cursor-pointer"
+                            contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-purple-500 [&_svg]:hidden"
+                          />
+                          <p className="text-xs text-red-400 mt-2">
+                            This must match the product users purchase to join your community.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Connector Line 1 */}
+                    <div className="flex justify-start pl-7 sm:pl-9">
+                      <div className="h-6 sm:h-8 w-0.5 bg-zinc-700" />
+                    </div>
+
+                    {/* Step 2: Upsell */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                      <div className="step-card-layout flex items-start gap-3 sm:gap-4">
+                        <div className="step-card-icon flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                          </svg>
+                        </div>
+                        <div className="step-card-content flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-green-400 uppercase tracking-wide">Step 2</span>
+                            <span className="text-xs text-zinc-600">•</span>
+                            <span className="text-xs text-zinc-500">Primary Upsell</span>
+                          </div>
+                          <label className="text-sm font-medium text-white block mb-2">Show this product</label>
+                          <Select
+                            placeholder="Select upsell product..."
+                            value={flow.upsellProductId}
+                            onValueChange={(val) => handleSetUpsellProduct(flowId, val)}
+                            size="md"
+                            items={productDropdownItems}
+                            className="step-card-select cursor-pointer"
+                            contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-green-500 [&_svg]:hidden"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Connector Line 2 */}
+                    <div className="flex items-center pl-7 sm:pl-9 gap-2 sm:gap-3">
+                      <div className="h-6 sm:h-8 w-0.5 bg-zinc-700" />
+                      <div className="flex items-center gap-2 -ml-1">
+                        <div className="h-0.5 w-3 sm:w-4 bg-zinc-700" />
+                        <span className="text-xs text-orange-400 bg-zinc-800 px-2 py-1 rounded border border-zinc-700">
+                          If declined...
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Downsell */}
+                    {flow.hasDownsell ? (
+                      <div className="bg-zinc-800/50 border border-orange-500/30 rounded-xl p-4">
+                        <div className="step-card-layout flex items-start gap-3 sm:gap-4">
+                          <div className="step-card-icon flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                          </div>
+                          <div className="step-card-content flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-orange-400 uppercase tracking-wide">Step 3</span>
+                                <span className="text-xs text-zinc-600">•</span>
+                                <span className="text-xs text-zinc-500">Downsell</span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveDownsellForFlow(flowId)}
+                                className="p-1.5 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                            <label className="text-sm font-medium text-white block mb-2">Show this if they decline</label>
+                            <Select
+                              placeholder="Select downsell product..."
+                              value={flow.downsellProductId}
+                              onValueChange={(val) => handleSetDownsellProduct(flowId, val)}
+                              size="md"
+                              items={productDropdownItems}
+                              className="step-card-select cursor-pointer"
+                              contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-orange-500 [&_svg]:hidden"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleAddDownsell(flowId)}
+                        className="w-full border-2 border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl p-4 flex items-center justify-center gap-2 text-zinc-400 hover:text-zinc-300 transition-colors group cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 group-hover:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span className="text-sm font-medium">Add Downsell Offer</span>
+                      </button>
+                    )}
+
+                    {/* Notification Settings for this flow */}
+                    <div className="mt-6 pt-6 border-t border-zinc-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-white">Push Notification</h4>
+                            <p className="text-xs text-zinc-500">Sent when this flow triggers</p>
+                          </div>
+                        </div>
+                        <div
+                          onClick={() => handleNotificationsEnabledChange(flowId, !flow.notificationsEnabled)}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="text-xs text-zinc-400 hidden sm:inline">
+                            {flow.notificationsEnabled ? "On" : "Off"}
+                          </span>
+                          <div
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              flow.notificationsEnabled ? "bg-blue-500" : "bg-zinc-600"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                flow.notificationsEnabled ? "translate-x-5" : "translate-x-1"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`space-y-3 ${!flow.notificationsEnabled ? "opacity-50 pointer-events-none" : ""}`}>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Title</label>
+                          <input
+                            type="text"
+                            value={flow.notificationTitle}
+                            onChange={(e) => handleNotificationTitleChange(flowId, e.target.value)}
+                            onBlur={() => handleSaveNotificationText(flowId)}
+                            placeholder="Notification title..."
+                            maxLength={50}
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Message</label>
+                          <textarea
+                            value={flow.notificationContent}
+                            onChange={(e) => handleNotificationContentChange(flowId, e.target.value)}
+                            onBlur={() => handleSaveNotificationText(flowId)}
+                            placeholder="Notification message..."
+                            maxLength={100}
+                            rows={2}
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
 
         {/* Your Products */}
