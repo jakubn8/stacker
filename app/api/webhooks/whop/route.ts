@@ -448,11 +448,16 @@ async function checkAndSendUpsellNotification(params: {
 
   // Check if we've already sent a notification to this user for this trigger + flow combination
   // Include flowId in the key to allow different flows to send notifications for same product
+  // Skip this check if DISABLE_NOTIFICATION_DEDUP is set (for testing)
   const notificationKey = `${flowId}_${productId}`;
-  const alreadySent = await hasNotificationBeenSent(params.ownerId, buyerUserId, notificationKey);
-  if (alreadySent) {
-    console.log("Notification already sent to user for this flow+trigger, skipping:", buyerUserId);
-    return;
+  if (!process.env.DISABLE_NOTIFICATION_DEDUP) {
+    const alreadySent = await hasNotificationBeenSent(params.ownerId, buyerUserId, notificationKey);
+    if (alreadySent) {
+      console.log("Notification already sent to user for this flow+trigger, skipping:", buyerUserId);
+      return;
+    }
+  } else {
+    console.log("Duplicate notification check disabled (DISABLE_NOTIFICATION_DEDUP=true)");
   }
 
   // Generate the offer token for the deep link
