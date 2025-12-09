@@ -472,8 +472,8 @@ async function checkAndSendUpsellNotification(params: {
       title: notificationSettings.title,
       content: notificationSettings.content,
       user_ids: [buyerUserId],
-      // Deep link with leading slash per docs example
-      rest_path: `/offer?token=${encodeURIComponent(token)}`,
+      // Deep link - path relative to /experiences/[experienceId]/
+      rest_path: `offer?token=${encodeURIComponent(token)}`,
     };
 
     console.log("Notification payload:", JSON.stringify(notificationPayload, null, 2));
