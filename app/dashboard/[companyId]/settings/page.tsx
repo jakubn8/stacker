@@ -119,8 +119,29 @@ export default function DashboardPage() {
     flow2: { ...DEFAULT_FLOW_STATE },
     flow3: { ...DEFAULT_FLOW_STATE },
   });
+  // Track the saved state from the server to detect unsaved changes
+  const [savedFlows, setSavedFlows] = useState<FlowsState>({
+    flow1: { ...DEFAULT_FLOW_STATE },
+    flow2: { ...DEFAULT_FLOW_STATE },
+    flow3: { ...DEFAULT_FLOW_STATE },
+  });
   const [flowConfigLoading, setFlowConfigLoading] = useState(true);
   const [flowSaving, setFlowSaving] = useState<FlowId | null>(null);
+
+  // Helper to check if a flow has unsaved changes
+  const hasUnsavedChanges = useCallback((flowId: FlowId): boolean => {
+    const current = flows[flowId];
+    const saved = savedFlows[flowId];
+    return (
+      current.isActive !== saved.isActive ||
+      current.triggerProductId !== saved.triggerProductId ||
+      current.upsellProductId !== saved.upsellProductId ||
+      current.downsellProductId !== saved.downsellProductId ||
+      current.hasDownsell !== saved.hasDownsell ||
+      current.notificationTitle !== saved.notificationTitle ||
+      current.notificationContent !== saved.notificationContent
+    );
+  }, [flows, savedFlows]);
 
   // Expanded flow accordions state
   const [expandedFlows, setExpandedFlows] = useState<Set<FlowId>>(new Set(["flow1"]));
@@ -303,11 +324,14 @@ export default function DashboardPage() {
 
         // Load all flows from API
         if (data.flows) {
-          setFlows({
+          const loadedFlows = {
             flow1: apiFlowToState(data.flows.flow1),
             flow2: apiFlowToState(data.flows.flow2),
             flow3: apiFlowToState(data.flows.flow3),
-          });
+          };
+          setFlows(loadedFlows);
+          // Also save as the "saved" state to track unsaved changes
+          setSavedFlows(loadedFlows);
 
           // Auto-expand flows that are active
           const activeFlows: FlowId[] = [];
@@ -338,20 +362,9 @@ export default function DashboardPage() {
     fetchFlowConfig();
   }, [fetchFlowConfig]);
 
-  // Save flow config to database (with flowId)
-  const saveFlowConfig = useCallback(async (flowId: FlowId, updates: {
-    flowConfig?: {
-      isActive?: boolean;
-      triggerProductId?: string | null;
-      upsellProductId?: string | null;
-      downsellProductId?: string | null;
-    };
-    notificationSettings?: {
-      title?: string;
-      content?: string;
-      enabled?: boolean;
-    };
-  }) => {
+  // Save complete flow data to database (manual save)
+  const handleSaveFlow = useCallback(async (flowId: FlowId) => {
+    const flow = flows[flowId];
     try {
       setFlowSaving(flowId);
       const response = await fetch("/api/flow/settings", {
@@ -361,11 +374,27 @@ export default function DashboardPage() {
           whopUserId,
           companyId: realCompanyId || companyId,
           flowId,
-          ...updates,
+          flowConfig: {
+            isActive: flow.isActive,
+            triggerProductId: flow.triggerProductId || null,
+            upsellProductId: flow.upsellProductId || null,
+            downsellProductId: flow.downsellProductId || null,
+          },
+          notificationSettings: {
+            title: flow.notificationTitle,
+            content: flow.notificationContent,
+            enabled: true, // Always enabled
+          },
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        // Update savedFlows to reflect the save
+        setSavedFlows(prev => ({
+          ...prev,
+          [flowId]: { ...flow }
+        }));
+      } else {
         console.error("Failed to save flow config");
       }
     } catch (error) {
@@ -373,7 +402,7 @@ export default function DashboardPage() {
     } finally {
       setFlowSaving(null);
     }
-  }, [whopUserId, companyId, realCompanyId]);
+  }, [flows, whopUserId, companyId, realCompanyId]);
 
   // Update flow state locally and save to database
   const updateFlow = useCallback((flowId: FlowId, updates: Partial<FlowState>) => {
@@ -396,7 +425,7 @@ export default function DashboardPage() {
     });
   };
 
-  // Flow handlers
+  // Flow handlers (local state only - user must manually save)
   const handleSetFlowActive = (flowId: FlowId, active: boolean) => {
     // Can't activate without a payment method
     if (active && !billingStatus?.user?.paymentMethodConnected) {
@@ -409,22 +438,18 @@ export default function DashboardPage() {
       return;
     }
     updateFlow(flowId, { isActive: active });
-    saveFlowConfig(flowId, { flowConfig: { isActive: active } });
   };
 
   const handleSetTriggerProduct = (flowId: FlowId, productId: string) => {
     updateFlow(flowId, { triggerProductId: productId });
-    saveFlowConfig(flowId, { flowConfig: { triggerProductId: productId || null } });
   };
 
   const handleSetUpsellProduct = (flowId: FlowId, productId: string) => {
     updateFlow(flowId, { upsellProductId: productId });
-    saveFlowConfig(flowId, { flowConfig: { upsellProductId: productId || null } });
   };
 
   const handleSetDownsellProduct = (flowId: FlowId, productId: string) => {
     updateFlow(flowId, { downsellProductId: productId });
-    saveFlowConfig(flowId, { flowConfig: { downsellProductId: productId || null } });
   };
 
   const handleAddDownsell = (flowId: FlowId) => {
@@ -433,31 +458,15 @@ export default function DashboardPage() {
 
   const handleRemoveDownsellForFlow = (flowId: FlowId) => {
     updateFlow(flowId, { hasDownsell: false, downsellProductId: "" });
-    saveFlowConfig(flowId, { flowConfig: { downsellProductId: null } });
   };
 
-  // Notification handlers for specific flow
+  // Notification handlers for specific flow (local state only)
   const handleNotificationTitleChange = (flowId: FlowId, value: string) => {
     updateFlow(flowId, { notificationTitle: value });
   };
 
   const handleNotificationContentChange = (flowId: FlowId, value: string) => {
     updateFlow(flowId, { notificationContent: value });
-  };
-
-  const handleNotificationsEnabledChange = (flowId: FlowId, enabled: boolean) => {
-    updateFlow(flowId, { notificationsEnabled: enabled });
-    saveFlowConfig(flowId, { notificationSettings: { enabled } });
-  };
-
-  const handleSaveNotificationText = (flowId: FlowId) => {
-    const flow = flows[flowId];
-    saveFlowConfig(flowId, {
-      notificationSettings: {
-        title: flow.notificationTitle,
-        content: flow.notificationContent,
-      }
-    });
   };
 
   // Helper function to format price
@@ -1357,7 +1366,7 @@ export default function DashboardPage() {
         <div className="space-y-4">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-            <div>
+            <div className="text-left">
               <h2 className="text-xl font-semibold text-white">Upsell Flows</h2>
               <p className="text-zinc-400 text-sm mt-1">
                 Create up to 3 upsell flows for different products
@@ -1631,7 +1640,6 @@ export default function DashboardPage() {
                             type="text"
                             value={flow.notificationTitle}
                             onChange={(e) => handleNotificationTitleChange(flowId, e.target.value)}
-                            onBlur={() => handleSaveNotificationText(flowId)}
                             placeholder="Notification title..."
                             maxLength={50}
                             className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
@@ -1642,7 +1650,6 @@ export default function DashboardPage() {
                           <textarea
                             value={flow.notificationContent}
                             onChange={(e) => handleNotificationContentChange(flowId, e.target.value)}
-                            onBlur={() => handleSaveNotificationText(flowId)}
                             placeholder="Notification message..."
                             maxLength={100}
                             rows={2}
@@ -1650,6 +1657,41 @@ export default function DashboardPage() {
                           />
                         </div>
                       </div>
+                    </div>
+
+                    {/* Save Button Section */}
+                    <div className="mt-6 pt-4 border-t border-zinc-700 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {hasUnsavedChanges(flowId) && (
+                          <span className="inline-flex items-center gap-1.5 text-amber-400 text-sm">
+                            <span className="h-2 w-2 bg-amber-400 rounded-full animate-pulse"></span>
+                            Unsaved changes
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleSaveFlow(flowId)}
+                        disabled={isSaving || !hasUnsavedChanges(flowId)}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed ${
+                          hasUnsavedChanges(flowId)
+                            ? "bg-green-600 hover:bg-green-500 text-white"
+                            : "bg-zinc-800 text-zinc-500 border border-zinc-700"
+                        } disabled:opacity-50`}
+                      >
+                        {isSaving ? (
+                          <>
+                            <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save Flow
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}
