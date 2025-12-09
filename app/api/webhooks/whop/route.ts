@@ -191,17 +191,8 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
 
   console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents", isUpsell ? "(upsell)" : "(storefront)");
 
-  // === UPSELL NOTIFICATION LOGIC ===
-  // Check if this purchase is the trigger product and send upsell notification
-  await checkAndSendUpsellNotification({
-    ownerId: user.id,
-    owner: user,
-    productId,
-    buyerUserId,
-    buyerEmail,
-    buyerMemberId,
-    companyId,
-  });
+  // Note: Upsell notifications are handled via membership.activated webhook
+  // This ensures a single source of truth for both free and paid products
 }
 
 /**
@@ -263,8 +254,8 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
 
 /**
  * Handle membership.activated - when a user gains access to a product
- * This handles upsell notifications for FREE products (no payment.succeeded for free)
- * Paid products are handled via payment.succeeded
+ * This is the SINGLE source of truth for upsell notifications
+ * Works for both free and paid products
  */
 async function handleMembershipActivated(data: Record<string, unknown>): Promise<void> {
   const product = data.product as { id?: string } | undefined;
@@ -286,14 +277,26 @@ async function handleMembershipActivated(data: Record<string, unknown>): Promise
     return;
   }
 
-  // Get the company owner
+  // Get the company owner (Stacker user)
   const owner = await getUserByWhopCompanyId(companyId);
   if (!owner) {
     console.log("Company not registered with Stacker:", companyId);
     return;
   }
 
-  // Send upsell notification (for free products - paid products handled in payment.succeeded)
+  // Check if upsell flow is configured
+  if (!owner.flowConfig?.triggerProductId) {
+    console.log("No trigger product configured for this company");
+    return;
+  }
+
+  console.log("Trigger product check:", {
+    purchasedProductId: productId,
+    triggerProductId: owner.flowConfig.triggerProductId,
+    isMatch: productId === owner.flowConfig.triggerProductId,
+  });
+
+  // Check and send upsell notification if this is the trigger product
   await checkAndSendUpsellNotification({
     ownerId: owner.id,
     owner: owner,
