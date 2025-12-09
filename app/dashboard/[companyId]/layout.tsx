@@ -76,12 +76,12 @@ export default async function CompanyDashboardLayout({
         userId,
         accessLevel: accessResult?.access_level,
         hasAccess: accessResult?.has_access,
-        fullResult: JSON.stringify(accessResult),
       });
 
       // Step 3: For dashboard, user must be an admin
-      // Be defensive - only block if we explicitly get a non-admin response
-      if (accessResult && accessResult.access_level && accessResult.access_level !== "admin") {
+      // Only block for known non-admin values - be lenient for edge cases
+      const nonAdminLevels = ["member", "customer", "guest", "none"];
+      if (accessResult?.access_level && nonAdminLevels.includes(accessResult.access_level)) {
         console.log("Access denied - user is not admin:", accessResult.access_level);
         return <AccessDenied />;
       }
