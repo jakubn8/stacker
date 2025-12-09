@@ -1365,8 +1365,8 @@ export default function DashboardPage() {
         {/* Upsell Flows Section */}
         <div className="space-y-4">
           {/* Section Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-            <div className="text-left">
+          <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <div>
               <h2 className="text-xl font-semibold text-white">Upsell Flows</h2>
               <p className="text-zinc-400 text-sm mt-1">
                 Create up to 3 upsell flows for different products
