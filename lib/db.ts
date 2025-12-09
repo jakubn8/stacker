@@ -106,6 +106,8 @@ export interface User {
   productImages: Record<string, string>;
   // Legacy field - kept for backwards compatibility
   productOverrides: Record<string, ProductOverride>;
+  // Whop experience ID for this company's Stacker app instance (for notifications)
+  experienceId?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -178,6 +180,34 @@ export async function getUserByWhopCompanyId(whopCompanyId: string): Promise<Use
   if (snapshot.empty) return null;
   const doc = snapshot.docs[0];
   return { id: doc.id, ...doc.data() } as User;
+}
+
+/**
+ * Get the stored experienceId for a company
+ */
+export async function getExperienceIdByCompanyId(whopCompanyId: string): Promise<string | null> {
+  const user = await getUserByWhopCompanyId(whopCompanyId);
+  return user?.experienceId || null;
+}
+
+/**
+ * Save the experienceId for a company (called when user accesses the Stacker app)
+ */
+export async function saveExperienceIdForCompany(whopCompanyId: string, experienceId: string): Promise<void> {
+  const user = await getUserByWhopCompanyId(whopCompanyId);
+  if (!user) {
+    console.log("Cannot save experienceId: user not found for company:", whopCompanyId);
+    return;
+  }
+
+  // Only update if different (avoid unnecessary writes)
+  if (user.experienceId !== experienceId) {
+    await db.collection("users").doc(user.id).update({
+      experienceId,
+      updatedAt: Timestamp.now(),
+    });
+    console.log("Saved experienceId for company:", whopCompanyId, "->", experienceId);
+  }
 }
 
 export async function getUserByWhopUserId(whopUserId: string): Promise<User | null> {

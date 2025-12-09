@@ -18,6 +18,7 @@ import {
   hasNotificationBeenSent,
   recordSentNotification,
   migrateUserToFlows,
+  getExperienceIdByCompanyId,
   type FlowId,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
@@ -372,10 +373,22 @@ export async function handleStackerUpsellPurchase(data: {
 /**
  * Get the Stacker app's experience_id for a given company
  * This is needed to send notifications to customers (not team members)
+ *
+ * Strategy:
+ * 1. Check database first (saved when user accesses the app)
+ * 2. Fall back to Whop API if not in database
  */
 async function getExperienceIdForCompany(companyId: string): Promise<string | null> {
+  // First, check if we have the experienceId stored in the database
+  const storedExperienceId = await getExperienceIdByCompanyId(companyId);
+  if (storedExperienceId) {
+    console.log("Found experienceId in database:", storedExperienceId);
+    return storedExperienceId;
+  }
+
+  // Fall back to Whop API lookup (requires experience:hidden_experience:read permission)
   try {
-    // List experiences for this company filtered by our app
+    console.log("Attempting to fetch experienceId from Whop API...");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const experiences = await (whopsdk.experiences as any).list({
       company_id: companyId,
@@ -385,13 +398,16 @@ async function getExperienceIdForCompany(companyId: string): Promise<string | nu
     // Get the first experience (there should only be one per app per company)
     const experienceList = experiences?.data || experiences || [];
     if (Array.isArray(experienceList) && experienceList.length > 0) {
-      return experienceList[0].id;
+      const experienceId = experienceList[0].id;
+      console.log("Found experienceId from Whop API:", experienceId);
+      return experienceId;
     }
 
     console.log("No Stacker experience found for company:", companyId);
     return null;
   } catch (error) {
     console.error("Failed to get experience for company:", error);
+    console.log("Note: The user needs to access the Stacker app at least once to enable notifications.");
     return null;
   }
 }

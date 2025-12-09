@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { whopsdk } from "@/lib/whop-sdk";
+import { saveExperienceIdForCompany } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,12 @@ export async function GET(
           { status: 400 }
         );
       }
+
+      // Save the experienceId for this company (for sending notifications later)
+      // This runs in the background - don't await to avoid slowing down the response
+      saveExperienceIdForCompany(companyId, experienceId).catch((err) => {
+        console.error("Failed to save experienceId:", err);
+      });
 
       return NextResponse.json({
         success: true,
