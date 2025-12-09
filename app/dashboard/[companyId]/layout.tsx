@@ -71,28 +71,13 @@ export default async function CompanyDashboardLayout({
         id: userId,
       });
 
-      console.log("Dashboard access check:", {
-        companyId,
-        userId,
-        accessLevel: accessResult?.access_level,
-        hasAccess: accessResult?.has_access,
-      });
-
-      // Step 3: For dashboard, user must be an admin
-      // Use allowlist of admin-level roles
-      const adminLevels = ["admin", "owner"];
-
-      // If we got a valid response with access_level, enforce it strictly
-      if (accessResult?.access_level) {
-        if (!adminLevels.includes(accessResult.access_level)) {
-          console.log("Access denied - user is not admin:", accessResult.access_level);
-          return <AccessDenied />;
-        }
+      // Step 3: For dashboard, user must be an admin (per Whop docs)
+      if (accessResult.access_level !== "admin") {
+        return <AccessDenied />;
       }
-      // If access_level is missing/undefined, allow through (API quirk, benefit of doubt)
     } catch (error) {
-      console.error("Access check failed, allowing through:", error);
-      // If access check fails, allow through (could be API issue)
+      console.error("Access check failed:", error);
+      return <AccessDenied />;
     }
   }
 
