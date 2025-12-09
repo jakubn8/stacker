@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { whopsdk, STACKER_COMPANY_ID } from "@/lib/whop-sdk";
+import { whopsdk, STACKER_COMPANY_ID, STACKER_APP_ID } from "@/lib/whop-sdk";
 import {
   getUserByWhopCompanyId,
   createTransaction,
@@ -370,6 +370,33 @@ export async function handleStackerUpsellPurchase(data: {
 }
 
 /**
+ * Get the Stacker app's experience_id for a given company
+ * This is needed to send notifications to customers (not team members)
+ */
+async function getExperienceIdForCompany(companyId: string): Promise<string | null> {
+  try {
+    // List experiences for this company filtered by our app
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const experiences = await (whopsdk.experiences as any).list({
+      company_id: companyId,
+      app_id: STACKER_APP_ID,
+    });
+
+    // Get the first experience (there should only be one per app per company)
+    const experienceList = experiences?.data || experiences || [];
+    if (Array.isArray(experienceList) && experienceList.length > 0) {
+      return experienceList[0].id;
+    }
+
+    console.log("No Stacker experience found for company:", companyId);
+    return null;
+  } catch (error) {
+    console.error("Failed to get experience for company:", error);
+    return null;
+  }
+}
+
+/**
  * Send upsell notification for a matched flow
  * Called from handleMembershipActivated after flow matching
  * Now uses flow-specific notification settings
@@ -425,10 +452,19 @@ async function checkAndSendUpsellNotification(params: {
 
   // Send push notification via Whop API
   try {
+    // Get the experience_id for this company (required to send notifications to customers)
+    const experienceId = await getExperienceIdForCompany(companyId);
+    if (!experienceId) {
+      console.error("Cannot send notification: no Stacker experience found for company:", companyId);
+      return;
+    }
+
+    console.log("Sending notification via experience:", experienceId);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (whopsdk.notifications as any).create({
       user_ids: [buyerUserId],
-      company_id: companyId,
+      experience_id: experienceId,
       title: notificationSettings.title,
       content: notificationSettings.content,
       // Deep link to the offer page - this opens inside the Whop app
