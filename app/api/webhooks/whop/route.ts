@@ -476,7 +476,7 @@ async function checkAndSendUpsellNotification(params: {
       content: notificationSettings.content,
       user_ids: [buyerUserId],
       // Deep link to offer page with short offer ID
-      rest_path: `?offer=${offerId}`,
+      rest_path: `/offer?offer=${offerId}`,
     };
 
     console.log("Notification payload:", JSON.stringify(notificationPayload, null, 2));
