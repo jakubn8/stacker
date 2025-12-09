@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,6 +10,7 @@ interface DashboardNavProps {
 
 export default function DashboardNav({ companyId }: DashboardNavProps) {
   const pathname = usePathname();
+  const [showEditorMessage, setShowEditorMessage] = useState(false);
 
   const navItems = [
     {
@@ -41,6 +43,7 @@ export default function DashboardNav({ companyId }: DashboardNavProps) {
     {
       name: "Editor",
       href: `/dashboard/${companyId}/editor`,
+      mobileDisabled: true,
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -56,16 +59,25 @@ export default function DashboardNav({ companyId }: DashboardNavProps) {
     return pathname.startsWith(href);
   };
 
+  const handleEditorClick = (e: React.MouseEvent, item: typeof navItems[0]) => {
+    if (item.mobileDisabled && window.innerWidth < 640) {
+      e.preventDefault();
+      setShowEditorMessage(true);
+      setTimeout(() => setShowEditorMessage(false), 3000);
+    }
+  };
+
   return (
-    <nav className="bg-zinc-900 border-b border-zinc-800">
+    <nav className="bg-zinc-900 border-b border-zinc-800 relative">
       <div className="flex items-center justify-center h-14">
         {/* Centered Nav Items */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 max-sm:gap-0">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              onClick={(e) => handleEditorClick(e, item)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors max-sm:px-2 max-sm:py-1.5 max-sm:gap-1.5 max-sm:text-xs ${
                 isActive(item.href)
                   ? "bg-zinc-800 text-white"
                   : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
@@ -77,6 +89,14 @@ export default function DashboardNav({ companyId }: DashboardNavProps) {
           ))}
         </div>
       </div>
+
+      {/* Mobile Editor Message */}
+      {showEditorMessage && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 shadow-xl max-w-[280px] text-center">
+          <p className="text-white text-sm font-medium mb-1">Desktop Required</p>
+          <p className="text-zinc-400 text-xs">The editor is only available on desktop devices.</p>
+        </div>
+      )}
     </nav>
   );
 }

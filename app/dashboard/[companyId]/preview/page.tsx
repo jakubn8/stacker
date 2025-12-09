@@ -62,6 +62,13 @@ export default function StorePreviewPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6">
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .products-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       <div className="max-w-4xl mx-auto">
         {/* Back Link */}
         <Link
@@ -104,7 +111,7 @@ export default function StorePreviewPage() {
             <p className="text-zinc-500 text-sm mt-2">Products will appear here once synced from Whop</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="products-grid grid grid-cols-2 gap-4">
             {products.map((product) => (
               <div
                 key={product.id}
@@ -130,9 +137,9 @@ export default function StorePreviewPage() {
                 {/* Product Info */}
                 <div className="p-4 flex flex-col h-full">
                   {/* Title and Price Row */}
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
                     <h3 className="text-white font-semibold text-base">{product.title}</h3>
-                    <span className="px-4 py-2 bg-zinc-800 text-white text-sm font-semibold rounded-lg">
+                    <span className="px-3 py-1.5 bg-zinc-800 text-white text-sm font-semibold rounded-lg w-fit">
                       {product.price === 0 ? "Free" : formatPrice(product.price, product.currency)}
                       {product.planType === "renewal" && product.billingPeriod && product.price > 0 && (
                         <span className="text-zinc-400 ml-1">

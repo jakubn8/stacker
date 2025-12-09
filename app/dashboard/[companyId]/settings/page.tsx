@@ -100,6 +100,17 @@ export default function DashboardPage() {
   // Payment method required modal
   const [showPaymentRequiredModal, setShowPaymentRequiredModal] = useState(false);
 
+  // Editor mobile message
+  const [showEditorMobileMessage, setShowEditorMobileMessage] = useState(false);
+
+  const handleEditorClick = (e: React.MouseEvent) => {
+    if (window.innerWidth < 640) {
+      e.preventDefault();
+      setShowEditorMobileMessage(true);
+      setTimeout(() => setShowEditorMobileMessage(false), 3000);
+    }
+  };
+
   // Hidden products (stored locally, will be persisted to DB)
   const [hiddenProductIds, setHiddenProductIds] = useState<Set<string>>(new Set());
 
@@ -611,6 +622,133 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .stats-card {
+            position: relative;
+            padding: 0.75rem !important;
+          }
+          .stats-card .flex {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+          .stats-card-title {
+            font-size: 0.75rem !important;
+            max-width: 70% !important;
+          }
+          .stats-card-icon {
+            position: absolute !important;
+            top: 0.75rem !important;
+            right: 0.75rem !important;
+            width: 1.75rem !important;
+            height: 1.75rem !important;
+          }
+          .stats-card-icon > svg {
+            width: 0.875rem !important;
+            height: 0.875rem !important;
+            margin: auto !important;
+            display: block !important;
+          }
+          .stats-card-number {
+            font-size: 1.5rem !important;
+            margin-top: 0.5rem !important;
+          }
+          .stats-card-footer {
+            margin-top: 0.5rem !important;
+            font-size: 0.625rem !important;
+          }
+          /* Billing section mobile styles */
+          .billing-header {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            align-items: flex-start !important;
+            gap: 0.5rem !important;
+          }
+          .billing-header-left {
+            flex: 1 !important;
+          }
+          .billing-header-left h2 {
+            font-size: 1.125rem !important;
+          }
+          .billing-header-left p {
+            font-size: 0.75rem !important;
+            margin-top: 0.25rem !important;
+          }
+          .billing-actions-btn {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          /* Upsell Flow section mobile styles */
+          .upsell-flow-title-section h2 {
+            font-size: 1.125rem !important;
+          }
+          .upsell-flow-subtitle {
+            font-size: 0.75rem !important;
+          }
+          /* Step cards dropdown mobile styles */
+          .step-card-layout {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+          }
+          .step-card-layout > .step-card-icon {
+            margin-bottom: 0.75rem !important;
+          }
+          .step-card-layout > .step-card-content {
+            width: 100% !important;
+          }
+          .step-card-content .flex {
+            justify-content: center !important;
+          }
+          .step-card-content label {
+            text-align: center !important;
+          }
+          .step-card-select {
+            font-size: 0.6875rem !important;
+          }
+          .step-card-select button {
+            font-size: 0.6875rem !important;
+          }
+          /* Push Notification header mobile styles */
+          .notification-header {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 1rem !important;
+          }
+          .notification-header-left {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+          }
+          .notification-header-toggle {
+            margin-top: 0.5rem !important;
+          }
+          /* Products section mobile styles */
+          .products-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 1rem !important;
+          }
+          .products-sync-btn {
+            width: 100% !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+          }
+          .billing-stats-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.5rem !important;
+          }
+          .billing-stat-card {
+            padding: 0.75rem !important;
+          }
+          .billing-stat-card p:first-child {
+            font-size: 0.625rem !important;
+          }
+          .billing-stat-value {
+            font-size: 1rem !important;
+          }
+        }
+      `}</style>
       {/* Hidden file input for image uploads */}
       <input
         ref={fileInputRef}
@@ -691,17 +829,17 @@ export default function DashboardPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 gap-4">
           {/* Total Revenue Card */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="stats-card bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-zinc-400 text-sm font-medium">Total Revenue Generated</p>
-                <p className="text-4xl font-bold text-green-500 mt-2">
+                <p className="stats-card-title text-zinc-400 text-sm font-medium">Total Revenue Generated</p>
+                <p className="stats-card-number text-4xl font-bold text-green-500 mt-2">
                   ${billingStatus?.billing?.totalRevenueGeneratedCents
                     ? (billingStatus.billing.totalRevenueGeneratedCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : "0.00"}
                 </p>
               </div>
-              <div className="h-12 w-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+              <div className="stats-card-icon h-12 w-12 bg-green-500/10 rounded-lg flex items-center justify-center">
                 <svg
                   className="w-6 h-6 text-green-500"
                   fill="none"
@@ -717,17 +855,17 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <p className="text-zinc-500 text-sm mt-4">+${analytics.weeklyRevenue.toFixed(2)} this week</p>
+            <p className="stats-card-footer text-zinc-500 text-sm mt-4">+${analytics.weeklyRevenue.toFixed(2)} this week</p>
           </div>
 
           {/* Conversion Rate Card */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="stats-card bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-zinc-400 text-sm font-medium">Conversion Rate</p>
-                <p className="text-4xl font-bold text-white mt-2">{analytics.conversionRate}%</p>
+                <p className="stats-card-title text-zinc-400 text-sm font-medium">Conversion Rate</p>
+                <p className="stats-card-number text-4xl font-bold text-white mt-2">{analytics.conversionRate}%</p>
               </div>
-              <div className="h-12 w-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
+              <div className="stats-card-icon h-12 w-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
                 <svg
                   className="w-6 h-6 text-purple-500"
                   fill="none"
@@ -743,7 +881,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <p className="text-zinc-500 text-sm mt-4">{analytics.totalConversions} conversions from {analytics.totalViews} views</p>
+            <p className="stats-card-footer text-zinc-500 text-sm mt-4">{analytics.totalConversions} conversions from {analytics.totalViews} views</p>
           </div>
         </div>
 
@@ -756,8 +894,8 @@ export default function DashboardPage() {
             : "border-zinc-800"
         }`}>
           <div className="p-6 border-b border-zinc-800">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="billing-header flex items-center justify-between">
+              <div className="billing-header-left">
                 <h2 className="text-xl font-semibold text-white">Stacker Billing</h2>
                 <p className="text-zinc-400 text-sm mt-1">
                   We charge 5% on successful upsells — we only make money when you do
@@ -980,30 +1118,30 @@ export default function DashboardPage() {
               /* Payment Method Connected - Show Billing Info */
               <div className="space-y-6">
                 {/* Billing Stats */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                <div className="billing-stats-grid grid grid-cols-4 gap-4">
+                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
                     <p className="text-zinc-400 text-sm">Current Bill</p>
-                    <p className="text-2xl font-bold text-white mt-1">
+                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">
                       ${billingStatus.billing.pendingFee.toFixed(2)}
                     </p>
                   </div>
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
                     <p className="text-zinc-400 text-sm">Next Payment</p>
-                    <p className="text-2xl font-bold text-white mt-1">
+                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">
                       {billingStatus.billing.daysTillBilling > 0
                         ? `in ${billingStatus.billing.daysTillBilling} days`
                         : "Today"}
                     </p>
                   </div>
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
                     <p className="text-zinc-400 text-sm">This Period</p>
-                    <p className="text-2xl font-bold text-white mt-1">
+                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">
                       {billingStatus.billing.pendingTransactionCount} upsells
                     </p>
                   </div>
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
                     <p className="text-zinc-400 text-sm">Billing Cycle</p>
-                    <p className="text-2xl font-bold text-white mt-1">Weekly</p>
+                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">Weekly</p>
                   </div>
                 </div>
 
@@ -1033,7 +1171,7 @@ export default function DashboardPage() {
                   <button
                     onClick={handleUpdatePaymentMethod}
                     disabled={connectingPayment}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    className="billing-actions-btn inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                   >
                     {connectingPayment ? (
                       <>
@@ -1150,24 +1288,25 @@ export default function DashboardPage() {
         {/* Upsell Flow Builder */}
         <div className="space-y-0">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
+          <div className="upsell-flow-header flex items-center justify-between gap-4 mb-6 max-sm:relative">
+            <div className="upsell-flow-title-section">
               <h2 className="text-xl font-semibold text-white">Upsell Flow</h2>
-              <p className="text-zinc-400 text-sm mt-1">
+              <p className="upsell-flow-subtitle text-zinc-400 text-sm mt-1">
                 Build your post-purchase upsell sequence
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="upsell-flow-controls flex items-center gap-4">
               <Link
                 href={`/dashboard/${companyId}/editor`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+                onClick={handleEditorClick}
+                className="upsell-flow-edit-btn hidden sm:inline-flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Edit Offer Page
               </Link>
-              <div className="flex items-center gap-3">
+              <div className="upsell-flow-toggle flex items-center gap-3 max-sm:absolute max-sm:top-0 max-sm:right-0 max-sm:gap-2">
                 <span className="text-sm font-medium text-zinc-400">
                   {isActive ? "Active" : "Inactive"}
                 </span>
@@ -1186,17 +1325,36 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          {/* Mobile Edit Button */}
+          <Link
+            href={`/dashboard/${companyId}/editor`}
+            onClick={handleEditorClick}
+            className="upsell-flow-edit-btn-mobile flex sm:hidden items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer mt-3 mb-6 w-full"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit Offer Page
+          </Link>
+
+          {/* Editor Mobile Message */}
+          {showEditorMobileMessage && (
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-6 py-4 shadow-xl max-w-[300px] text-center">
+              <p className="text-white text-sm font-medium mb-1">Desktop Required</p>
+              <p className="text-zinc-400 text-xs">The editor is only available on desktop devices.</p>
+            </div>
+          )}
 
           {/* Step 1: The Trigger */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <div className="step-card-layout flex items-start gap-4">
+              <div className="step-card-icon flex-shrink-0 h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="flex-1">
+              <div className="step-card-content flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-medium text-purple-400 uppercase tracking-wide">Step 1</span>
                   <span className="text-xs text-zinc-600">•</span>
@@ -1209,7 +1367,7 @@ export default function DashboardPage() {
                   onValueChange={handleSetTriggerProduct}
                   size="md"
                   items={productDropdownItems}
-                  className="px-4 cursor-pointer"
+                  className="step-card-select px-4 cursor-pointer"
                   contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-purple-500 [&_svg]:hidden"
                 />
               </div>
@@ -1223,13 +1381,13 @@ export default function DashboardPage() {
 
           {/* Step 2: Primary Upsell */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+            <div className="step-card-layout flex items-start gap-4">
+              <div className="step-card-icon flex-shrink-0 h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
-              <div className="flex-1">
+              <div className="step-card-content flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-medium text-green-400 uppercase tracking-wide">Step 2</span>
                   <span className="text-xs text-zinc-600">•</span>
@@ -1242,7 +1400,7 @@ export default function DashboardPage() {
                   onValueChange={handleSetUpsellProduct}
                   size="md"
                   items={productDropdownItems}
-                  className="px-4 cursor-pointer"
+                  className="step-card-select px-4 cursor-pointer"
                   contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-green-500 [&_svg]:hidden"
                 />
               </div>
@@ -1263,13 +1421,13 @@ export default function DashboardPage() {
           {/* Step 3: Downsell (Conditional) */}
           {hasDownsell ? (
             <div className="bg-zinc-900 border border-orange-500/30 rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+              <div className="step-card-layout flex items-start gap-4">
+                <div className="step-card-icon flex-shrink-0 h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
                   <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
-                <div className="flex-1">
+                <div className="step-card-content flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-orange-400 uppercase tracking-wide">Step 3</span>
@@ -1292,7 +1450,7 @@ export default function DashboardPage() {
                     onValueChange={handleSetDownsellProduct}
                     size="md"
                     items={productDropdownItems}
-                    className="px-4 cursor-pointer"
+                    className="step-card-select px-4 cursor-pointer"
                     contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-orange-500 [&_svg]:hidden"
                   />
                   <p className="text-xs text-zinc-500 mt-2">
@@ -1317,8 +1475,8 @@ export default function DashboardPage() {
         {/* Notification Settings */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-zinc-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="notification-header flex items-center justify-between">
+              <div className="notification-header-left flex items-center gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                   <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -1331,7 +1489,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="notification-header-toggle flex items-center gap-3">
                 <span className="text-sm font-medium text-zinc-400">
                   {notificationsEnabled ? "Enabled" : "Disabled"}
                 </span>
@@ -1430,7 +1588,7 @@ export default function DashboardPage() {
         {/* Your Products */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-zinc-800">
-            <div className="flex items-center justify-between">
+            <div className="products-header flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-white">Your Products</h2>
                 <p className="text-zinc-400 text-sm mt-1">
@@ -1440,7 +1598,7 @@ export default function DashboardPage() {
               <button
                 onClick={fetchProducts}
                 disabled={productsLoading}
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="products-sync-btn inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 <svg className={`w-4 h-4 ${productsLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1481,7 +1639,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="products-table w-full">
                 <thead className="bg-zinc-900/50">
                   <tr className="border-b border-zinc-800">
                     <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
@@ -1490,10 +1648,10 @@ export default function DashboardPage() {
                     <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
                       Price
                     </th>
-                    <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
+                    <th className=" text-left text-sm font-medium text-zinc-400 px-6 py-4">
                       Type
                     </th>
-                    <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
+                    <th className=" text-left text-sm font-medium text-zinc-400 px-6 py-4">
                       Status
                     </th>
                     <th className="text-center text-sm font-medium text-zinc-400 px-6 py-4">
@@ -1551,9 +1709,9 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-white font-medium">{product.title}</p>
+                            <p className="product-title text-white font-medium">{product.title}</p>
                             {product.headline && (
-                              <p className="text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
+                              <p className="product-desc text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
                             )}
                             {!imageUrl && (
                               <p className="text-orange-400 text-xs mt-0.5">Upload image</p>
@@ -1567,7 +1725,7 @@ export default function DashboardPage() {
                           <p className="text-zinc-500 text-xs">/{product.billingPeriod === 30 ? 'month' : product.billingPeriod === 365 ? 'year' : `${product.billingPeriod} days`}</p>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className=" px-6 py-4">
                         <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
                           product.planType === "renewal"
                             ? "bg-purple-500/20 text-purple-400"
@@ -1578,7 +1736,7 @@ export default function DashboardPage() {
                           {product.planType === "renewal" ? "Recurring" : product.planType === "free" ? "Free" : "One Time"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className=" px-6 py-4">
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-green-500/20 text-green-400">
                           <span className="h-1.5 w-1.5 bg-green-500 rounded-full"></span>
                           Visible
@@ -1588,13 +1746,13 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-center">
                           <button
                             onClick={() => handleHideProduct(product.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-orange-400 transition-colors cursor-pointer text-sm"
+                            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-orange-400 transition-colors cursor-pointer text-sm"
                             title="Hide from store"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                             </svg>
-                            Hide
+                            <span className="hidden sm:inline">Hide</span>
                           </button>
                         </div>
                       </td>
@@ -1626,9 +1784,9 @@ export default function DashboardPage() {
                             </div>
                           )}
                           <div>
-                            <p className="text-zinc-400 font-medium">{product.title}</p>
+                            <p className="product-title text-zinc-400 font-medium">{product.title}</p>
                             {product.headline && (
-                              <p className="text-zinc-600 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
+                              <p className="product-desc text-zinc-600 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
                             )}
                           </div>
                         </div>
@@ -1636,12 +1794,12 @@ export default function DashboardPage() {
                       <td className="px-6 py-4">
                         <p className="text-zinc-500 font-medium">{formatPrice(product.price, product.currency)}</p>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className=" px-6 py-4">
                         <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-zinc-700/50 text-zinc-500">
                           {product.planType === "renewal" ? "Recurring" : product.planType === "free" ? "Free" : "One Time"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className=" px-6 py-4">
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-zinc-700/50 text-zinc-500">
                           <span className="h-1.5 w-1.5 bg-zinc-500 rounded-full"></span>
                           Hidden
@@ -1651,14 +1809,14 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-center">
                           <button
                             onClick={() => handleUnhideProduct(product.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-green-400 transition-colors cursor-pointer text-sm"
+                            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-green-400 transition-colors cursor-pointer text-sm"
                             title="Show in store"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                            Show
+                            <span className="hidden sm:inline">Show</span>
                           </button>
                         </div>
                       </td>

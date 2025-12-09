@@ -96,6 +96,41 @@ export default function DashboardHome() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .how-it-works-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.75rem !important;
+          }
+          .how-it-works-step {
+            flex-direction: row !important;
+            text-align: left !important;
+            gap: 1.25rem !important;
+          }
+          .how-it-works-icon-container {
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            margin-bottom: 0 !important;
+            border-radius: 0.75rem !important;
+          }
+          .how-it-works-icon-container svg {
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+          }
+          .how-it-works-step .absolute span {
+            width: 1.125rem !important;
+            height: 1.125rem !important;
+            font-size: 0.625rem !important;
+          }
+          .how-it-works-title {
+            font-size: 0.875rem !important;
+            margin-bottom: 0.125rem !important;
+          }
+          .how-it-works-step p {
+            font-size: 0.75rem !important;
+          }
+        }
+      `}</style>
       <DashboardNav companyId={companyId} />
       <div className="flex items-center justify-center p-6">
         <div className="max-w-4xl w-full">
@@ -124,30 +159,35 @@ export default function DashboardHome() {
               How it works
             </h2>
 
-            <div className="grid grid-cols-3 gap-6">
+            <div className="how-it-works-grid grid grid-cols-3 gap-6">
               {steps.map((step, index) => (
-                <div key={step.number} className="relative flex flex-col items-center text-center">
-                  {/* Step number badge */}
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold shadow-lg shadow-green-500/30">
-                      {step.number}
-                    </span>
+                <div key={step.number} className="how-it-works-step relative flex flex-col items-center text-center">
+                  {/* Icon with badge */}
+                  <div className="relative flex-shrink-0">
+                    {/* Step number badge */}
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold shadow-lg shadow-green-500/30">
+                        {step.number}
+                      </span>
+                    </div>
+                    {/* Icon */}
+                    <div className="how-it-works-icon-container h-16 w-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4 mt-2">
+                      <span className="text-green-400">{step.icon}</span>
+                    </div>
                   </div>
 
-                  {/* Icon */}
-                  <div className="h-16 w-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4 mt-2">
-                    <span className="text-green-400">{step.icon}</span>
+                  {/* Text container */}
+                  <div>
+                    {/* Title */}
+                    <h3 className="how-it-works-title text-white font-semibold text-base mb-2">
+                      {step.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-zinc-500 text-sm">
+                      {step.description}
+                    </p>
                   </div>
-
-                  {/* Title */}
-                  <h3 className="text-white font-semibold text-base mb-2 leading-tight">
-                    {step.title}
-                  </h3>
-
-                  {/* Description */}
-                  <p className="text-zinc-500 text-sm leading-relaxed">
-                    {step.description}
-                  </p>
 
                   {/* Arrow connector */}
                   {index < steps.length - 1 && (

@@ -57,6 +57,9 @@ export default function EditorPage() {
   // Device mode toggle (desktop vs mobile)
   const [deviceMode, setDeviceMode] = useState<"desktop" | "mobile">("desktop");
 
+  // Mobile panel toggle (for mobile view only)
+  const [showMobilePanel, setShowMobilePanel] = useState(false);
+
   // Products from Whop
   const [products, setProducts] = useState<WhopProduct[]>([]);
 
@@ -291,20 +294,21 @@ export default function EditorPage() {
   return (
     <div className="h-screen bg-zinc-950 flex flex-col overflow-hidden">
       <DashboardNav companyId={companyId} />
+
       <div className="flex-1 flex overflow-hidden">
-      {/* Left Side - Preview Canvas (70%) */}
-      <div className="w-[70%] relative overflow-hidden">
+      {/* Left Side - Preview Canvas (70% on desktop, full on mobile when not editing) */}
+      <div className={`w-[70%] relative overflow-hidden max-sm:w-full ${showMobilePanel ? 'max-sm:hidden' : ''}`}>
         {/* Gradient background for preview window effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-zinc-950 to-green-900/20" />
 
         {/* Preview Label & Product Toggle */}
-        <div className="absolute top-6 left-6 z-10 flex items-center gap-3">
-          <div className="inline-flex items-center gap-2 bg-zinc-800/80 backdrop-blur-sm border border-zinc-700 rounded-full px-4 py-1.5">
+        <div className="absolute top-6 left-6 z-10 flex items-center gap-3 max-sm:top-4 max-sm:left-4 max-sm:right-4 max-sm:flex-wrap max-sm:gap-2">
+          <div className="inline-flex items-center gap-2 bg-zinc-800/80 backdrop-blur-sm border border-zinc-700 rounded-full px-4 py-1.5 max-sm:px-3 max-sm:py-1">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-zinc-300 text-sm font-medium">Live Preview</span>
+            <span className="text-zinc-300 text-sm font-medium max-sm:text-xs">Live Preview</span>
           </div>
 
           {/* Product Toggle */}
@@ -343,8 +347,8 @@ export default function EditorPage() {
             </div>
           </div>
 
-          {/* Device Toggle */}
-          <div className="inline-flex items-center bg-zinc-800/80 backdrop-blur-sm border border-zinc-700 rounded-full p-1">
+          {/* Device Toggle - hidden on mobile since they're already on mobile */}
+          <div className="inline-flex items-center bg-zinc-800/80 backdrop-blur-sm border border-zinc-700 rounded-full p-1 max-sm:hidden">
             <button
               onClick={() => setDeviceMode("desktop")}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
@@ -375,7 +379,7 @@ export default function EditorPage() {
         </div>
 
         {/* Centered Preview Card */}
-        <div className="h-full flex items-center justify-center p-4 pt-20">
+        <div className="h-full flex items-center justify-center p-4 pt-20 max-sm:pt-24">
           {deviceMode === "desktop" ? (
             /* Desktop View - Card only, no browser frame */
             <div className="flex items-center justify-center">
@@ -811,13 +815,36 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Right Side - Control Panel (30%) */}
-      <div className="w-[30%] bg-zinc-900 border-l border-zinc-800 flex flex-col">
+      {/* Mobile Toggle Button - Edit Panel (only on mobile) */}
+      <button
+        onClick={() => setShowMobilePanel(!showMobilePanel)}
+        className="hidden max-sm:flex fixed bottom-6 right-6 z-50 items-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-500 text-white font-medium rounded-full shadow-lg shadow-green-500/30 transition-colors"
+      >
+        {showMobilePanel ? (
+          <>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Preview
+          </>
+        ) : (
+          <>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </>
+        )}
+      </button>
+
+      {/* Right Side - Control Panel (30% on desktop, full on mobile when editing) */}
+      <div className={`w-[30%] bg-zinc-900 border-l border-zinc-800 flex flex-col max-sm:w-full ${showMobilePanel ? '' : 'max-sm:hidden'}`}>
         {/* Header with Save Button */}
-        <div className="p-6 border-b border-zinc-800">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-6 border-b border-zinc-800 max-sm:p-4">
+          <div className="flex items-center justify-between mb-4 max-sm:flex-col max-sm:items-stretch max-sm:gap-3 max-sm:mb-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-white">Edit Offer</h2>
+              <h2 className="text-xl font-semibold text-white max-sm:text-lg">Edit Offer</h2>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                 activeProduct === "upsell"
                   ? "bg-green-500/20 text-green-400"
@@ -829,7 +856,7 @@ export default function EditorPage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 border border-green-500 rounded-lg text-white text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed inline-flex items-center gap-2"
+              className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 border border-green-500 rounded-lg text-white text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed inline-flex items-center gap-2 max-sm:w-full max-sm:justify-center"
             >
               {isSaving ? (
                 <>
@@ -841,7 +868,7 @@ export default function EditorPage() {
               )}
             </button>
           </div>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-zinc-400 text-sm max-sm:text-xs">
             Customize your {activeProduct} offer. Changes appear instantly in the preview.
           </p>
           {saveMessage && (
@@ -856,7 +883,7 @@ export default function EditorPage() {
         </div>
 
         {/* Scrollable Form Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-sm:p-4 max-sm:space-y-5 max-sm:pb-24">
           {/* Headline */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-zinc-300">Headline</label>
@@ -1085,8 +1112,8 @@ export default function EditorPage() {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-zinc-800">
+        {/* Footer - hidden on mobile since toggle button is there */}
+        <div className="p-6 border-t border-zinc-800 max-sm:hidden">
           <p className="text-xs text-zinc-500 text-center">
             Changes are saved when you click &quot;Save Changes&quot;
           </p>
