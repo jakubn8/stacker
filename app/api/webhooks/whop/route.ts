@@ -263,17 +263,46 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
 
 /**
  * Handle membership.activated - when a user gains access to a product
- * Note: Upsell notifications are now handled in payment.succeeded for reliability
- * This handler just logs for debugging purposes
+ * This handles upsell notifications for FREE products (no payment.succeeded for free)
+ * Paid products are handled via payment.succeeded
  */
 async function handleMembershipActivated(data: Record<string, unknown>): Promise<void> {
   const product = data.product as { id?: string } | undefined;
   const company = data.company as { id?: string } | undefined;
+  const userObj = data.user as { id?: string; email?: string } | undefined;
+  const member = data.member as { id?: string } | undefined;
+
   const productId = (data.product_id as string) || product?.id || "";
   const companyId = (data.company_id as string) || company?.id || "";
+  const buyerUserId = (data.user_id as string) || userObj?.id || "";
+  const buyerEmail = userObj?.email || null;
+  const buyerMemberId = (data.member_id as string) || member?.id || "";
 
-  console.log("Membership activated:", { productId, companyId });
-  // Notification logic moved to handlePaymentSucceeded -> checkAndSendUpsellNotification
+  console.log("Membership activated:", { productId, companyId, buyerUserId });
+
+  // Skip if missing required data
+  if (!productId || !companyId || !buyerUserId) {
+    console.log("Missing required data for membership activated");
+    return;
+  }
+
+  // Get the company owner
+  const owner = await getUserByWhopCompanyId(companyId);
+  if (!owner) {
+    console.log("Company not registered with Stacker:", companyId);
+    return;
+  }
+
+  // Send upsell notification (for free products - paid products handled in payment.succeeded)
+  await checkAndSendUpsellNotification({
+    ownerId: owner.id,
+    owner: owner,
+    productId,
+    buyerUserId,
+    buyerEmail,
+    buyerMemberId,
+    companyId,
+  });
 }
 
 /**
