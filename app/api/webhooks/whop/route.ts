@@ -464,18 +464,24 @@ async function checkAndSendUpsellNotification(params: {
       return;
     }
 
-    console.log("Sending notification via experience:", experienceId);
+    console.log("Sending notification via experience:", experienceId, "to user:", buyerUserId);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (whopsdk.notifications as any).create({
+    // Build notification payload per Whop docs
+    const notificationPayload = {
       experience_id: experienceId,
       title: notificationSettings.title,
       content: notificationSettings.content,
       user_ids: [buyerUserId],
-      // Deep link to the offer page
-      rest_path: `offer?token=${encodeURIComponent(token)}`,
-    });
+      // Deep link with leading slash per docs example
+      rest_path: `/offer?token=${encodeURIComponent(token)}`,
+    };
 
+    console.log("Notification payload:", JSON.stringify(notificationPayload, null, 2));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (whopsdk.notifications as any).create(notificationPayload);
+
+    console.log("Notification API response:", JSON.stringify(result, null, 2));
     console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId);
   } catch (error) {
     console.error("Failed to send upsell notification:", error);
