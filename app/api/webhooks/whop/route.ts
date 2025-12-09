@@ -472,6 +472,8 @@ async function checkAndSendUpsellNotification(params: {
       title: notificationSettings.title,
       content: notificationSettings.content,
       user_ids: [buyerUserId],
+      // Deep link to the offer page
+      rest_path: `offer?token=${encodeURIComponent(token)}`,
     });
 
     console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId);
