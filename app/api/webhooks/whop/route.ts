@@ -428,6 +428,7 @@ async function checkAndSendUpsellNotification(params: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (whopsdk.notifications as any).create({
       user_ids: [buyerUserId],
+      company_id: companyId,
       title: notificationSettings.title,
       content: notificationSettings.content,
       // Deep link to the offer page - this opens inside the Whop app
