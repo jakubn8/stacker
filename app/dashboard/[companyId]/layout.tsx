@@ -79,12 +79,17 @@ export default async function CompanyDashboardLayout({
       });
 
       // Step 3: For dashboard, user must be an admin
-      // Only block for known non-admin values - be lenient for edge cases
-      const nonAdminLevels = ["member", "customer", "guest", "none"];
-      if (accessResult?.access_level && nonAdminLevels.includes(accessResult.access_level)) {
-        console.log("Access denied - user is not admin:", accessResult.access_level);
-        return <AccessDenied />;
+      // Use allowlist of admin-level roles
+      const adminLevels = ["admin", "owner"];
+
+      // If we got a valid response with access_level, enforce it strictly
+      if (accessResult?.access_level) {
+        if (!adminLevels.includes(accessResult.access_level)) {
+          console.log("Access denied - user is not admin:", accessResult.access_level);
+          return <AccessDenied />;
+        }
       }
+      // If access_level is missing/undefined, allow through (API quirk, benefit of doubt)
     } catch (error) {
       console.error("Access check failed, allowing through:", error);
       // If access check fails, allow through (could be API issue)
