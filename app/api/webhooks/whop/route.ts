@@ -88,12 +88,19 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   // Handle nested objects - Whop may send product.id instead of product_id
   const product = data.product as { id?: string } | undefined;
   const company = data.company as { id?: string } | undefined;
+  const userObj = data.user as { id?: string; email?: string } | undefined;
+  const member = data.member as { id?: string } | undefined;
 
   const paymentId = (data.id as string) || "";
   const companyId = (data.company_id as string) || company?.id || "";
   const productId = (data.product_id as string) || product?.id || "";
   const amount = (data.total as number) || 0; // Amount in cents
   const currency = (data.currency as string) || "usd";
+
+  // Extract buyer info for upsell notifications
+  const buyerUserId = (data.user_id as string) || userObj?.id || "";
+  const buyerEmail = userObj?.email || null;
+  const buyerMemberId = (data.member_id as string) || member?.id || "";
 
   console.log("Payment succeeded parsed:", { paymentId, companyId, productId, amount });
 
@@ -183,6 +190,18 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   }
 
   console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents", isUpsell ? "(upsell)" : "(storefront)");
+
+  // === UPSELL NOTIFICATION LOGIC ===
+  // Check if this purchase is the trigger product and send upsell notification
+  await checkAndSendUpsellNotification({
+    ownerId: user.id,
+    owner: user,
+    productId,
+    buyerUserId,
+    buyerEmail,
+    buyerMemberId,
+    companyId,
+  });
 }
 
 /**
@@ -254,15 +273,14 @@ async function handleMembershipActivated(data: Record<string, unknown>): Promise
   const product = data.product as { id?: string } | undefined;
   const company = data.company as { id?: string } | undefined;
   const user = data.user as { id?: string; email?: string } | undefined;
-  const member = data.member as { id?: string } | undefined;
 
   const membershipId = (data.id as string) || "";
   const productId = (data.product_id as string) || product?.id || "";
   const companyId = (data.company_id as string) || company?.id || "";
   const visitorId = (data.user_id as string) || user?.id || "";
   const userEmail = (data.email as string) || user?.email || null;
-  // member_id is needed for one-click payments (mber_xxx format)
-  const memberId = (data.member_id as string) || member?.id || membershipId;
+  // member_id is needed for one-click payments
+  const memberId = (data.member_id as string) || membershipId;
 
   console.log("Membership activated parsed:", { membershipId, memberId, productId, companyId, visitorId });
 
@@ -402,4 +420,83 @@ export async function handleStackerUpsellPurchase(data: {
     offerType: metadata.stacker_offer_type,
     amount: amountCents,
   });
+}
+
+/**
+ * Check if purchase is a trigger product and send upsell notification
+ * Called from handlePaymentSucceeded after recording the transaction
+ */
+async function checkAndSendUpsellNotification(params: {
+  ownerId: string;
+  owner: { flowConfig: { isActive: boolean; triggerProductId: string | null }; notificationSettings?: { title: string; content: string; enabled: boolean } };
+  productId: string;
+  buyerUserId: string;
+  buyerEmail: string | null;
+  buyerMemberId: string;
+  companyId: string;
+}): Promise<void> {
+  const { owner, productId, buyerUserId, buyerEmail, buyerMemberId, companyId } = params;
+
+  console.log("Checking upsell notification:", { productId, triggerProductId: owner.flowConfig?.triggerProductId });
+
+  // Check if upsell flow can run
+  const flowCheck = await canRunUpsellFlow(params.ownerId);
+  console.log("Flow check result:", flowCheck);
+  if (!flowCheck.allowed) {
+    console.log("Upsell flow not available:", flowCheck.reason);
+    return;
+  }
+
+  // Check if this is the trigger product
+  if (owner.flowConfig?.triggerProductId !== productId) {
+    console.log("Not the trigger product, skipping notification");
+    return;
+  }
+
+  // Check if notifications are enabled
+  const notificationSettings = owner.notificationSettings || {
+    title: "🎁 Wait! Your order isn't complete...",
+    content: "You unlocked an exclusive offer! Tap to claim it now.",
+    enabled: true,
+  };
+
+  if (!notificationSettings.enabled) {
+    console.log("Notifications disabled for this owner, skipping");
+    return;
+  }
+
+  // Check if we've already sent a notification to this user for this trigger
+  const alreadySent = await hasNotificationBeenSent(params.ownerId, buyerUserId, productId);
+  if (alreadySent) {
+    console.log("Notification already sent to user for this trigger, skipping:", buyerUserId);
+    return;
+  }
+
+  // Generate the offer token for the deep link
+  const token = generateOfferToken({
+    buyerUserId,
+    buyerEmail,
+    buyerMemberId,
+    companyId,
+    triggerProductId: productId,
+  });
+
+  // Send push notification via Whop API
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (whopsdk.notifications as any).create({
+      user_ids: [buyerUserId],
+      title: notificationSettings.title,
+      content: notificationSettings.content,
+      // Deep link to the offer page - this opens inside the Whop app
+      rest_path: `/experience/offer?token=${encodeURIComponent(token)}`,
+    });
+
+    // Record that we sent this notification to prevent duplicates
+    await recordSentNotification(params.ownerId, buyerUserId, productId);
+
+    console.log("Upsell notification sent to user:", buyerUserId);
+  } catch (error) {
+    console.error("Failed to send upsell notification:", error);
+  }
 }
