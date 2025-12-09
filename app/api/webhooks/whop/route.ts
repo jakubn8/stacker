@@ -263,109 +263,17 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
 
 /**
  * Handle membership.activated - when a user gains access to a product
- * This is where we check if the product is a trigger product and send the upsell notification
+ * Note: Upsell notifications are now handled in payment.succeeded for reliability
+ * This handler just logs for debugging purposes
  */
 async function handleMembershipActivated(data: Record<string, unknown>): Promise<void> {
-  // Log full payload to debug field names
-  console.log("Membership activated full payload:", JSON.stringify(data, null, 2));
-
-  // Handle nested objects - Whop may send product.id instead of product_id
   const product = data.product as { id?: string } | undefined;
   const company = data.company as { id?: string } | undefined;
-  const user = data.user as { id?: string; email?: string } | undefined;
-
-  const membershipId = (data.id as string) || "";
   const productId = (data.product_id as string) || product?.id || "";
   const companyId = (data.company_id as string) || company?.id || "";
-  const visitorId = (data.user_id as string) || user?.id || "";
-  const userEmail = (data.email as string) || user?.email || null;
-  // member_id is needed for one-click payments
-  const memberId = (data.member_id as string) || membershipId;
 
-  console.log("Membership activated parsed:", { membershipId, memberId, productId, companyId, visitorId });
-
-  // Validate required fields
-  if (!companyId || !productId || !visitorId) {
-    console.error("Missing required fields in membership webhook:", { companyId, productId, visitorId });
-    return;
-  }
-
-  // Skip if this is our Stacker company
-  if (companyId === STACKER_COMPANY_ID) {
-    console.log("Skipping our own Stacker company");
-    return;
-  }
-
-  // Get the community owner
-  console.log("Looking up owner for company:", companyId);
-  const owner = await getUserByWhopCompanyId(companyId);
-  if (!owner) {
-    console.log("Owner not found for company:", companyId);
-    return;
-  }
-  console.log("Found owner:", owner.id, "flowConfig:", JSON.stringify(owner.flowConfig));
-
-  // Check if upsell flow can run
-  const flowCheck = await canRunUpsellFlow(owner.id);
-  console.log("Flow check result:", flowCheck);
-  if (!flowCheck.allowed) {
-    console.log("Upsell flow not available:", flowCheck.reason);
-    return;
-  }
-
-  // Check if this is the trigger product
-  console.log("Comparing trigger product:", owner.flowConfig?.triggerProductId, "vs purchased:", productId);
-  if (owner.flowConfig?.triggerProductId !== productId) {
-    console.log("Not the trigger product, skipping");
-    return;
-  }
-
-  // Check if notifications are enabled
-  const notificationSettings = owner.notificationSettings || {
-    title: "🎁 Wait! Your order isn't complete...",
-    content: "You unlocked an exclusive offer! Tap to claim it now.",
-    enabled: true,
-  };
-
-  if (!notificationSettings.enabled) {
-    console.log("Notifications disabled for this owner, skipping");
-    return;
-  }
-
-  // Check if we've already sent a notification to this user for this trigger
-  const alreadySent = await hasNotificationBeenSent(owner.id, visitorId, productId);
-  if (alreadySent) {
-    console.log("Notification already sent to user for this trigger, skipping:", visitorId);
-    return;
-  }
-
-  // Generate the offer token for the deep link (includes member_id for one-click payments)
-  const token = generateOfferToken({
-    buyerUserId: visitorId,
-    buyerEmail: userEmail,
-    buyerMemberId: memberId,
-    companyId: companyId,
-    triggerProductId: productId,
-  });
-
-  // Send push notification via Whop API
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (whopsdk.notifications as any).create({
-      user_ids: [visitorId],
-      title: notificationSettings.title,
-      content: notificationSettings.content,
-      // Deep link to the offer page - this opens inside the Whop app
-      rest_path: `/experience/offer?token=${encodeURIComponent(token)}`,
-    });
-
-    // Record that we sent this notification to prevent duplicates
-    await recordSentNotification(owner.id, visitorId, productId);
-
-    console.log("Upsell notification sent to user:", visitorId);
-  } catch (error) {
-    console.error("Failed to send upsell notification:", error);
-  }
+  console.log("Membership activated:", { productId, companyId });
+  // Notification logic moved to handlePaymentSucceeded -> checkAndSendUpsellNotification
 }
 
 /**
