@@ -76,6 +76,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Upload to Firebase Storage
     const bucket = adminStorage.bucket();
+
+    // Delete any existing images for this product (with any extension)
+    const extensions = ["jpeg", "png", "gif", "webp", "jpg"];
+    for (const ext of extensions) {
+      const oldFilename = `product-images/${user.whopCompanyId}/${productId}.${ext}`;
+      try {
+        const oldFile = bucket.file(oldFilename);
+        const [exists] = await oldFile.exists();
+        if (exists) {
+          await oldFile.delete();
+          console.log(`Deleted old image: ${oldFilename}`);
+        }
+      } catch (deleteError) {
+        // Ignore delete errors - file might not exist
+        console.log(`Could not delete ${oldFilename}:`, deleteError);
+      }
+    }
+
     const fileRef = bucket.file(filename);
 
     await fileRef.save(buffer, {
@@ -87,8 +105,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Make the file publicly accessible
     await fileRef.makePublic();
 
-    // Get the public URL
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+    // Get the public URL with cache busting timestamp
+    const timestamp = Date.now();
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}?t=${timestamp}`;
 
     // Save the image URL to the database
     await updateProductImage(user.id, productId, publicUrl);
