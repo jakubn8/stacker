@@ -15,8 +15,6 @@ import {
   incrementTotalRevenue,
   canRunAnyUpsellFlow,
   recordUpsellConversion,
-  hasNotificationBeenSent,
-  recordSentNotification,
   migrateUserToFlows,
   getExperienceIdByCompanyId,
   type FlowId,
@@ -446,20 +444,6 @@ async function checkAndSendUpsellNotification(params: {
     return;
   }
 
-  // Check if we've already sent a notification to this user for this trigger + flow combination
-  // Include flowId in the key to allow different flows to send notifications for same product
-  // Skip this check if DISABLE_NOTIFICATION_DEDUP is set (for testing)
-  const notificationKey = `${flowId}_${productId}`;
-  if (!process.env.DISABLE_NOTIFICATION_DEDUP) {
-    const alreadySent = await hasNotificationBeenSent(params.ownerId, buyerUserId, notificationKey);
-    if (alreadySent) {
-      console.log("Notification already sent to user for this flow+trigger, skipping:", buyerUserId);
-      return;
-    }
-  } else {
-    console.log("Duplicate notification check disabled (DISABLE_NOTIFICATION_DEDUP=true)");
-  }
-
   // Generate the offer token for the deep link
   // Now includes flowId so the offer page knows which flow's products to show
   const token = generateOfferToken({
@@ -491,9 +475,6 @@ async function checkAndSendUpsellNotification(params: {
       // Deep link to the offer page - this opens inside the Whop app
       restPath: `/experience/offer?token=${encodeURIComponent(token)}`,
     });
-
-    // Record that we sent this notification to prevent duplicates
-    await recordSentNotification(params.ownerId, buyerUserId, notificationKey);
 
     console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId);
   } catch (error) {
