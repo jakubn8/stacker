@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { STACKER_COMPANY_ID } from "@/lib/whop-sdk";
-import { getUserByWhopCompanyId, canRunAnyUpsellFlow } from "@/lib/db";
+import { getUserByWhopCompanyId, canRunAnyUpsellFlow, getExperienceIdByCompanyId } from "@/lib/db";
 import { generateOfferToken } from "@/lib/offer-tokens";
 
 export const dynamic = "force-dynamic";
@@ -64,9 +64,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       flowId: flowCheck.flowId,
     });
 
+    // Get the experienceId for this company (needed for the URL path)
+    const experienceId = await getExperienceIdByCompanyId(companyId);
+    if (!experienceId) {
+      console.log("ExperienceId not found for company, redirecting to community");
+      return NextResponse.redirect(`https://whop.com/hub/${companyId}`);
+    }
+
     // Redirect to the offer page
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://stacker.app";
-    const offerUrl = `${baseUrl}/experience/offer?token=${encodeURIComponent(token)}`;
+    const offerUrl = `${baseUrl}/experiences/${experienceId}/offer?token=${encodeURIComponent(token)}`;
 
     console.log("Redirecting to offer page:", offerUrl, "for flow:", flowCheck.flowId);
     return NextResponse.redirect(offerUrl);

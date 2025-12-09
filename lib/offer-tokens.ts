@@ -96,21 +96,3 @@ export function verifyOfferToken(token: string): OfferTokenPayload | null {
     return null;
   }
 }
-
-/**
- * Generate the offer page URL with token
- */
-export function generateOfferUrl(
-  baseUrl: string,
-  tokenData: {
-    buyerUserId: string;
-    buyerEmail: string | null;
-    buyerMemberId: string;
-    companyId: string;
-    triggerProductId: string;
-    flowId: FlowId;
-  }
-): string {
-  const token = generateOfferToken(tokenData);
-  return `${baseUrl}/experience/offer?token=${encodeURIComponent(token)}`;
-}

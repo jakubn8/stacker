@@ -31,7 +31,7 @@ export default function ExperiencePage() {
       try {
         setLoading(true);
         // Fetch experience info to get the company ID
-        const expResponse = await fetch(`/api/experience/${experienceId}`);
+        const expResponse = await fetch(`/api/experiences/${experienceId}`);
 
         if (!expResponse.ok) {
           if (expResponse.status === 403) {

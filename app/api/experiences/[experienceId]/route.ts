@@ -5,7 +5,7 @@ import { saveExperienceIdForCompany } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/experience/[experienceId]
+ * GET /api/experiences/[experienceId]
  * Validates user access and returns experience info
  * Only accessible to members who have access to this experience
  *
