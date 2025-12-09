@@ -1335,3 +1335,103 @@ export async function checkAndResetWeeklyAnalyticsIfNeeded(userId: string): Prom
   return false;
 }
 
+// ============================================
+// OFFER SESSION FUNCTIONS
+// ============================================
+
+/**
+ * Offer session data stored in Firestore
+ * Used for short offer URLs instead of long tokens
+ */
+export interface OfferSession {
+  id: string;
+  ownerId: string; // Stacker user who owns this flow
+  flowId: FlowId;
+  buyerUserId: string;
+  buyerEmail: string | null;
+  buyerMemberId: string;
+  companyId: string;
+  triggerProductId: string;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+}
+
+/**
+ * Generate a short random ID for offer sessions
+ * Format: offer_XXXXXXXXXX (10 random alphanumeric chars)
+ */
+function generateShortId(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "offer_";
+  for (let i = 0; i < 10; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+/**
+ * Create an offer session with a short ID
+ * Returns the short ID to use in the notification rest_path
+ * Sessions expire after 1 hour for security
+ */
+export async function createOfferSession(data: {
+  ownerId: string;
+  flowId: FlowId;
+  buyerUserId: string;
+  buyerEmail: string | null;
+  buyerMemberId: string;
+  companyId: string;
+  triggerProductId: string;
+}): Promise<string> {
+  const now = Timestamp.now();
+  const expiresAt = Timestamp.fromDate(
+    new Date(Date.now() + 60 * 60 * 1000) // 1 hour expiry
+  );
+
+  const offerId = generateShortId();
+
+  const sessionData = {
+    ownerId: data.ownerId,
+    flowId: data.flowId,
+    buyerUserId: data.buyerUserId,
+    buyerEmail: data.buyerEmail,
+    buyerMemberId: data.buyerMemberId,
+    companyId: data.companyId,
+    triggerProductId: data.triggerProductId,
+    createdAt: now,
+    expiresAt,
+  };
+
+  // Use the short ID as the document ID for easy lookup
+  await db.collection("offerSessions").doc(offerId).set(sessionData);
+
+  console.log("Created offer session:", offerId);
+  return offerId;
+}
+
+/**
+ * Get an offer session by its short ID
+ * Returns null if not found or expired
+ */
+export async function getOfferSession(offerId: string): Promise<OfferSession | null> {
+  const doc = await db.collection("offerSessions").doc(offerId).get();
+  if (!doc.exists) {
+    console.log("Offer session not found:", offerId);
+    return null;
+  }
+
+  const data = doc.data() as Omit<OfferSession, "id">;
+
+  // Check if expired
+  const now = new Date();
+  const expiresAt = data.expiresAt.toDate();
+  if (now > expiresAt) {
+    console.log("Offer session expired:", offerId);
+    // Optionally delete expired session
+    await db.collection("offerSessions").doc(offerId).delete();
+    return null;
+  }
+
+  return { id: doc.id, ...data } as OfferSession;
+}
+

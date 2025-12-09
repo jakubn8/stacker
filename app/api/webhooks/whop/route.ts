@@ -15,8 +15,8 @@ import {
   incrementTotalRevenue,
   canRunAnyUpsellFlow,
   recordUpsellConversion,
-  migrateUserToFlows,
   getExperienceIdByCompanyId,
+  createOfferSession,
   type FlowId,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
@@ -414,6 +414,7 @@ async function getExperienceIdForCompany(companyId: string): Promise<string | nu
  * Send upsell notification for a matched flow
  * Called from handleMembershipActivated after flow matching
  * Now uses flow-specific notification settings
+ * Uses short offer IDs stored in Firestore instead of long tokens
  */
 async function checkAndSendUpsellNotification(params: {
   ownerId: string;
@@ -428,7 +429,7 @@ async function checkAndSendUpsellNotification(params: {
   buyerMemberId: string;
   companyId: string;
 }): Promise<void> {
-  const { flowId, flow, productId, buyerUserId, buyerEmail, buyerMemberId, companyId } = params;
+  const { ownerId, flowId, flow, productId, buyerUserId, buyerEmail, buyerMemberId, companyId } = params;
 
   console.log("Sending upsell notification for flow:", { flowId, productId });
 
@@ -444,15 +445,16 @@ async function checkAndSendUpsellNotification(params: {
     return;
   }
 
-  // Generate the offer token for the deep link
-  // Now includes flowId so the offer page knows which flow's products to show
-  const token = generateOfferToken({
+  // Create a short offer session in Firestore instead of long token
+  // This keeps the rest_path short (~25 chars vs ~370 chars)
+  const offerId = await createOfferSession({
+    ownerId,
+    flowId,
     buyerUserId,
     buyerEmail,
     buyerMemberId,
     companyId,
     triggerProductId: productId,
-    flowId,
   });
 
   // Send push notification via Whop API
@@ -467,13 +469,14 @@ async function checkAndSendUpsellNotification(params: {
     console.log("Sending notification via experience:", experienceId, "to user:", buyerUserId);
 
     // Build notification payload per Whop docs
+    // Using short offer ID instead of long token
     const notificationPayload = {
       experience_id: experienceId,
       title: notificationSettings.title,
       content: notificationSettings.content,
       user_ids: [buyerUserId],
-      // Deep link - path relative to /experiences/[experienceId]/
-      rest_path: `offer?token=${encodeURIComponent(token)}`,
+      // Deep link to offer page with short offer ID
+      rest_path: `?offer=${offerId}`,
     };
 
     console.log("Notification payload:", JSON.stringify(notificationPayload, null, 2));
@@ -482,7 +485,7 @@ async function checkAndSendUpsellNotification(params: {
     const result = await (whopsdk.notifications as any).create(notificationPayload);
 
     console.log("Notification API response:", JSON.stringify(result, null, 2));
-    console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId);
+    console.log("Upsell notification sent to user:", buyerUserId, "for flow:", flowId, "offerId:", offerId);
   } catch (error) {
     console.error("Failed to send upsell notification:", error);
   }

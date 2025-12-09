@@ -50,7 +50,9 @@ interface OfferResponse {
 
 function OfferPageContent() {
   const searchParams = useSearchParams();
+  // Support both old token format and new short offer ID
   const token = searchParams.get("token");
+  const offerId = searchParams.get("offer");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,15 +62,20 @@ function OfferPageContent() {
 
   // Fetch offer data on mount
   useEffect(() => {
-    if (!token) {
-      setError("Invalid link - no token provided");
+    // Support both token and offer ID
+    if (!token && !offerId) {
+      setError("Invalid link - no offer ID provided");
       setLoading(false);
       return;
     }
 
     const fetchOfferData = async () => {
       try {
-        const response = await fetch(`/api/offer/data?token=${encodeURIComponent(token)}`);
+        // Build URL with either token or offer ID
+        const queryParam = offerId
+          ? `offer=${encodeURIComponent(offerId)}`
+          : `token=${encodeURIComponent(token!)}`;
+        const response = await fetch(`/api/offer/data?${queryParam}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -88,18 +95,22 @@ function OfferPageContent() {
     };
 
     fetchOfferData();
-  }, [token]);
+  }, [token, offerId]);
 
   // Handle accept offer
   const handleAccept = async () => {
-    if (!offerData || !token) return;
+    if (!offerData || (!token && !offerId)) return;
 
     setProcessing(true);
     try {
       const response = await fetch("/api/offer/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, offerType: currentOffer }),
+        body: JSON.stringify({
+          // Support both token and offer ID
+          ...(offerId ? { offerId } : { token }),
+          offerType: currentOffer,
+        }),
       });
 
       const data = await response.json();

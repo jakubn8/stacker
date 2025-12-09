@@ -4,6 +4,10 @@ import {
   getUserByWhopCompanyId,
   recordUpsellConversion,
   createTransaction,
+  getOfferSession,
+  getUser,
+  migrateUserToFlows,
+  type FlowId,
 } from "@/lib/db";
 import { whopsdk } from "@/lib/whop-sdk";
 
@@ -12,16 +16,24 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/offer/accept
  * ONE-CLICK PAYMENT: Charges the customer's saved payment method directly
- * Body: { token, offerType: "upsell" | "downsell" }
+ * Body: { token, offerType: "upsell" | "downsell" } or { offerId, offerType: "upsell" | "downsell" }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    const { token, offerType } = body;
+    const { token, offerId, offerType } = body;
 
-    if (!token || !offerType) {
+    // Must have either token or offer ID
+    if (!token && !offerId) {
       return NextResponse.json(
-        { error: "Token and offerType are required" },
+        { error: "Token or offerId is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!offerType) {
+      return NextResponse.json(
+        { error: "offerType is required" },
         { status: 400 }
       );
     }
@@ -33,29 +45,81 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Verify the token
-    const payload = verifyOfferToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: "Invalid or expired token" },
-        { status: 401 }
-      );
+    // Payload variables to be populated from either token or Firestore session
+    let buyerUserId: string;
+    let companyId: string;
+    let triggerProductId: string;
+    let flowId: FlowId;
+    let buyerMemberId: string;
+    let ownerId: string;
+
+    if (offerId) {
+      // Look up offer session from Firestore
+      const session = await getOfferSession(offerId);
+      if (!session) {
+        return NextResponse.json(
+          { error: "Invalid or expired offer link" },
+          { status: 401 }
+        );
+      }
+
+      buyerUserId = session.buyerUserId;
+      companyId = session.companyId;
+      triggerProductId = session.triggerProductId;
+      flowId = session.flowId;
+      buyerMemberId = session.buyerMemberId;
+      ownerId = session.ownerId;
+    } else {
+      // Verify the JWT token (legacy method)
+      const payload = verifyOfferToken(token!);
+      if (!payload) {
+        return NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 401 }
+        );
+      }
+
+      buyerUserId = payload.buyerUserId;
+      companyId = payload.companyId;
+      triggerProductId = payload.triggerProductId;
+      flowId = payload.flowId || "flow1";
+      buyerMemberId = payload.buyerMemberId;
+      // For token method, we need to look up ownerId
+      const ownerByCompany = await getUserByWhopCompanyId(companyId);
+      if (!ownerByCompany) {
+        return NextResponse.json(
+          { error: "Company not found" },
+          { status: 404 }
+        );
+      }
+      ownerId = ownerByCompany.id;
     }
 
-    // Get the community owner's settings
-    const owner = await getUserByWhopCompanyId(payload.companyId);
+    // Get the owner's user document
+    const owner = await getUser(ownerId);
     if (!owner) {
       return NextResponse.json(
-        { error: "Company not found" },
+        { error: "Owner not found" },
         { status: 404 }
       );
     }
 
-    // Get the correct product ID based on offer type
+    // Get flows (with migration for legacy users)
+    const flows = migrateUserToFlows(owner);
+    const flow = flows[flowId];
+
+    if (!flow) {
+      return NextResponse.json(
+        { error: "Flow not found" },
+        { status: 400 }
+      );
+    }
+
+    // Get the correct product ID based on offer type and flow
     const productId =
       offerType === "upsell"
-        ? owner.flowConfig.upsellProductId
-        : owner.flowConfig.downsellProductId;
+        ? flow.upsellProductId
+        : flow.downsellProductId;
 
     if (!productId) {
       return NextResponse.json(
@@ -66,7 +130,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Get the plan for this product to get the price
     const plansResponse = await whopsdk.plans.list({
-      company_id: payload.companyId,
+      company_id: companyId,
       product_ids: [productId],
     });
     const planData = plansResponse.data[0];
@@ -81,15 +145,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Get the buyer's saved payment methods
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const paymentMethodsResponse = await (whopsdk.paymentMethods as any).list({
-      member_id: payload.buyerMemberId,
+      member_id: buyerMemberId,
     });
 
     const paymentMethods = paymentMethodsResponse.data || [];
 
+    // Build session data for checkout fallback
+    const sessionData = { companyId, buyerUserId, triggerProductId, buyerMemberId };
+
     if (paymentMethods.length === 0) {
       // No saved payment method - fall back to checkout session
       console.log("No saved payment method, falling back to checkout");
-      return await createCheckoutFallback(payload, planData, offerType);
+      return await createCheckoutFallback(sessionData, planData, offerType);
     }
 
     // Use the first (most recent) payment method
@@ -110,14 +177,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         plan_type: planType,
         ...(planType === "renewal" && { renewal_price: planInfo.renewal_price }),
       },
-      company_id: payload.companyId,
-      member_id: payload.buyerMemberId,
+      company_id: companyId,
+      member_id: buyerMemberId,
       payment_method_id: paymentMethodId,
       metadata: {
         stacker_offer_type: offerType,
-        stacker_buyer_user_id: payload.buyerUserId,
-        stacker_company_id: payload.companyId,
-        stacker_trigger_product_id: payload.triggerProductId,
+        stacker_buyer_user_id: buyerUserId,
+        stacker_company_id: companyId,
+        stacker_trigger_product_id: triggerProductId,
         stacker_product_id: productId,
       },
     });
@@ -160,12 +227,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * Fallback: Create checkout session if no saved payment method
  */
 async function createCheckoutFallback(
-  payload: { companyId: string; buyerUserId: string; triggerProductId: string; buyerMemberId: string },
+  sessionData: { companyId: string; buyerUserId: string; triggerProductId: string; buyerMemberId: string },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   planData: any,
   offerType: string
 ): Promise<NextResponse> {
-  const redirectUrl = `https://whop.com/hub/${payload.companyId}`;
+  const redirectUrl = `https://whop.com/hub/${sessionData.companyId}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const checkoutSession = await (whopsdk.checkoutConfigurations.create as any)({
@@ -173,9 +240,9 @@ async function createCheckoutFallback(
     redirect_url: redirectUrl,
     metadata: {
       stacker_offer_type: offerType,
-      stacker_buyer_user_id: payload.buyerUserId,
-      stacker_company_id: payload.companyId,
-      stacker_trigger_product_id: payload.triggerProductId,
+      stacker_buyer_user_id: sessionData.buyerUserId,
+      stacker_company_id: sessionData.companyId,
+      stacker_trigger_product_id: sessionData.triggerProductId,
     },
   });
 

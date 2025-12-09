@@ -1,41 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyOfferToken } from "@/lib/offer-tokens";
-import { getUserByWhopCompanyId, recordUpsellView, migrateUserToFlows } from "@/lib/db";
+import { getUserByWhopCompanyId, recordUpsellView, migrateUserToFlows, getOfferSession, getUser, type FlowId } from "@/lib/db";
 import { whopsdk } from "@/lib/whop-sdk";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/offer/data?token=xxx
- * Fetches the offer data for a customer based on their secure token
- * Now supports multiple flows - uses flowId from token to get correct products
+ * GET /api/offer/data?token=xxx or /api/offer/data?offer=xxx
+ * Fetches the offer data for a customer based on their secure token or short offer ID
+ * Now supports multiple flows - uses flowId from token/session to get correct products
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token");
+    const offerId = searchParams.get("offer");
 
-    if (!token) {
+    // Must have either token or offer ID
+    if (!token && !offerId) {
       return NextResponse.json(
-        { error: "Token is required" },
+        { error: "Token or offer ID is required" },
         { status: 400 }
       );
     }
 
-    // Verify the token
-    const payload = verifyOfferToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: "Invalid or expired token" },
-        { status: 401 }
-      );
+    // Payload variables to be populated from either token or Firestore session
+    let buyerUserId: string;
+    let companyId: string;
+    let triggerProductId: string;
+    let flowId: FlowId;
+    let ownerId: string;
+
+    if (offerId) {
+      // Look up offer session from Firestore
+      const session = await getOfferSession(offerId);
+      if (!session) {
+        return NextResponse.json(
+          { error: "Invalid or expired offer link" },
+          { status: 401 }
+        );
+      }
+
+      buyerUserId = session.buyerUserId;
+      companyId = session.companyId;
+      triggerProductId = session.triggerProductId;
+      flowId = session.flowId;
+      ownerId = session.ownerId;
+    } else {
+      // Verify the JWT token (legacy method)
+      const payload = verifyOfferToken(token!);
+      if (!payload) {
+        return NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 401 }
+        );
+      }
+
+      buyerUserId = payload.buyerUserId;
+      companyId = payload.companyId;
+      triggerProductId = payload.triggerProductId;
+      flowId = payload.flowId || "flow1";
+      // For token method, we need to look up ownerId
+      const ownerByCompany = await getUserByWhopCompanyId(companyId);
+      if (!ownerByCompany) {
+        return NextResponse.json(
+          { error: "Company not found" },
+          { status: 404 }
+        );
+      }
+      ownerId = ownerByCompany.id;
     }
 
-    // Get the community owner's settings
-    const owner = await getUserByWhopCompanyId(payload.companyId);
+    // Get the owner's user document
+    const owner = await getUser(ownerId);
     if (!owner) {
       return NextResponse.json(
-        { error: "Company not found" },
+        { error: "Owner not found" },
         { status: 404 }
       );
     }
@@ -43,9 +83,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Get flows (with migration for legacy users)
     const flows = migrateUserToFlows(owner);
 
-    // Get the specific flow from the token
-    // For backwards compatibility, default to flow1 if no flowId in token
-    const flowId = payload.flowId || "flow1";
+    // Get the specific flow
     const flow = flows[flowId];
 
     if (!flow) {
@@ -64,7 +102,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Verify the trigger product matches
-    if (flow.triggerProductId !== payload.triggerProductId) {
+    if (flow.triggerProductId !== triggerProductId) {
       return NextResponse.json(
         { error: "Product mismatch", redirect: true },
         { status: 400 }
@@ -86,7 +124,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const [upsellProduct, upsellPlansResponse] = await Promise.all([
       whopsdk.products.retrieve(upsellProductId),
       whopsdk.plans.list({
-        company_id: payload.companyId,
+        company_id: companyId,
         product_ids: [upsellProductId],
       }),
     ]);
@@ -105,7 +143,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [downsellProduct, downsellPlansResponse] = await Promise.all([
         whopsdk.products.retrieve(downsellProductId),
         whopsdk.plans.list({
-          company_id: payload.companyId,
+          company_id: companyId,
           product_ids: [downsellProductId],
         }),
       ]);
@@ -141,10 +179,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({
       success: true,
-      // Token info for the accept flow
-      buyerUserId: payload.buyerUserId,
-      companyId: payload.companyId,
-      flowId: flowId,
+      // Session info for the accept flow
+      buyerUserId,
+      companyId,
+      flowId,
       // Upsell data
       upsell: {
         product: {
@@ -165,7 +203,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Downsell data (if configured)
       downsell: downsellData,
       // Where to redirect after
-      redirectUrl: `https://whop.com/hub/${payload.companyId}`,
+      redirectUrl: `https://whop.com/hub/${companyId}`,
     });
   } catch (error) {
     console.error("Get offer data error:", error);
