@@ -2,6 +2,13 @@ import { ReactNode } from "react";
 import { headers } from "next/headers";
 import { whopsdk } from "@/lib/whop-sdk";
 
+// Check if URL contains a token param (notification deep link)
+function hasTokenParam(headersList: Headers): boolean {
+  const referer = headersList.get("referer") || "";
+  const url = headersList.get("x-url") || headersList.get("x-invoke-path") || "";
+  return referer.includes("token=") || url.includes("token=");
+}
+
 /**
  * Experience [experienceId] Layout
  *
@@ -81,6 +88,15 @@ export default async function ExperienceLayout({
 
   // Step 1: Verify the user token to get userId
   const headersList = await headers();
+
+  // Check if this is a deep link to the offer page (has token param)
+  // Skip access check for offer pages - they validate via signed token
+  const isOfferDeepLink = hasTokenParam(headersList);
+  if (isOfferDeepLink) {
+    console.log("Skipping access check for offer deep link");
+    return <>{children}</>;
+  }
+
   const tokenResult = await whopsdk.verifyUserToken(headersList, {
     dontThrow: true,
   });
