@@ -65,8 +65,7 @@ export const whopsdk = {
 
 // Stacker's billing company ID (where Stacker receives 5% fee payments from sellers)
 // This must be DIFFERENT from any seller's company ID
-// Set STACKER_BILLING_COMPANY_ID in env vars when you create Stacker's Whop company
-export const STACKER_COMPANY_ID = process.env.STACKER_BILLING_COMPANY_ID || "biz_STACKER_NOT_SET";
+export const STACKER_COMPANY_ID = process.env.WHOP_COMPANY_ID || "";
 
 // Stacker's App ID
 export const STACKER_APP_ID = process.env.WHOP_APP_ID || "";
