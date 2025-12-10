@@ -163,12 +163,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Use the first (most recent) payment method
     const paymentMethodId = paymentMethods[0].id;
 
-    // Create ONE-CLICK payment using existing plan
+    // Create ONE-CLICK payment with inline plan
     // See: https://docs.whop.com/api-reference/payments/create-payment
+    // Note: Requires 'plan:create' permission in Whop app settings
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const planInfo = planData as any;
+    const price = planInfo.initial_price || planInfo.price || 0;
+    const currency = planInfo.currency || "usd";
+    const planType = planInfo.renewal_price ? "renewal" : "one_time";
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payment = await (whopsdk.payments as any).create({
       plan: {
-        id: planData.id,  // Reference existing plan by ID
+        initial_price: price,
+        currency: currency,
+        plan_type: planType,
+        ...(planType === "renewal" && { renewal_price: planInfo.renewal_price }),
       },
       company_id: companyId,
       member_id: buyerMemberId,
