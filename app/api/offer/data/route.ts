@@ -161,7 +161,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           },
           plan: {
             id: downsellPlan.id,
-            price: downsellPlan.initial_price / 100, // Convert from cents
+            price: downsellPlan.initial_price, // Whop sends price in dollars
             billingPeriod: downsellPlan.billing_period,
             isRecurring: !!downsellPlan.renewal_price,
           },
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         },
         plan: {
           id: upsellPlan.id,
-          price: upsellPlan.initial_price / 100, // Convert from cents
+          price: upsellPlan.initial_price, // Whop sends price in dollars
           billingPeriod: upsellPlan.billing_period,
           isRecurring: !!upsellPlan.renewal_price,
         },
