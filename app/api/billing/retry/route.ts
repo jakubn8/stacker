@@ -99,12 +99,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     console.log(`Retry payment for user ${user.id}: $${totalFee.toFixed(2)}`);
 
+    // Try to get the correct payment method ID from Whop
+    let paymentMethodIdToUse = user.paymentMethodId;
+    try {
+      const paymentMethods = await whopsdk.paymentMethods.list({
+        member_id: user.whopMemberId,
+      });
+      console.log("Payment methods for member:", JSON.stringify(paymentMethods, null, 2));
+
+      // Use the first payment method if available
+      if (paymentMethods.data && paymentMethods.data.length > 0) {
+        paymentMethodIdToUse = paymentMethods.data[0].id;
+        console.log("Using payment method from API:", paymentMethodIdToUse);
+      }
+    } catch (listError) {
+      console.log("Could not list payment methods:", listError);
+    }
+
+    console.log("Payment params:", {
+      company_id: STACKER_COMPANY_ID,
+      member_id: user.whopMemberId,
+      payment_method_id: paymentMethodIdToUse,
+    });
+
     // Attempt to charge the user
     try {
       const payment = await whopsdk.payments.create({
         company_id: STACKER_COMPANY_ID,
         member_id: user.whopMemberId,
-        payment_method_id: user.paymentMethodId,
+        payment_method_id: paymentMethodIdToUse,
         plan: {
           initial_price: Math.round(totalFee * 100), // Convert to cents
           currency: "usd",
