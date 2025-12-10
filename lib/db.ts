@@ -1500,7 +1500,7 @@ export async function createOfferSession(data: {
 }): Promise<string> {
   const now = Timestamp.now();
   const expiresAt = Timestamp.fromDate(
-    new Date(Date.now() + 60 * 60 * 1000) // 1 hour expiry
+    new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hour expiry
   );
 
   const offerId = generateShortId();
