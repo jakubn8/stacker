@@ -7,6 +7,7 @@ import {
   getOfferSession,
   getUser,
   migrateUserToFlows,
+  createStackerPayment,
   type FlowId,
 } from "@/lib/db";
 import { whopsdk } from "@/lib/whop-sdk";
@@ -180,16 +181,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       company_id: companyId,
       member_id: buyerMemberId,
       payment_method_id: paymentMethodId,
-      metadata: {
-        stacker_offer_type: offerType,
-        stacker_buyer_user_id: buyerUserId,
-        stacker_company_id: companyId,
-        stacker_trigger_product_id: triggerProductId,
-        stacker_product_id: productId,
-      },
+      // Note: payments.create doesn't support metadata, so we track in Firestore instead
     });
 
     console.log("One-click payment initiated:", payment.id);
+
+    // Track this payment in Firestore so the webhook knows it's a Stacker sale
+    // This is necessary because Whop's payments.create doesn't support metadata
+    await createStackerPayment({
+      whopPaymentId: payment.id,
+      source: offerType as "upsell" | "downsell",
+      ownerId,
+      companyId,
+      productId,
+      buyerUserId,
+    });
 
     // Payment is processed async - webhook will handle recording the transaction
     // Return success immediately

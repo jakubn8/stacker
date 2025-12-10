@@ -1550,3 +1550,75 @@ export async function getOfferSession(offerId: string): Promise<OfferSession | n
   return { id: doc.id, ...data } as OfferSession;
 }
 
+// ============================================
+// STACKER PAYMENT TRACKING
+// ============================================
+// Since Whop's payments.create API doesn't support metadata,
+// we track pending Stacker payments in Firestore and look them up
+// by payment ID in the webhook.
+
+export interface StackerPayment {
+  id: string;
+  whopPaymentId: string;
+  source: "upsell" | "downsell" | "storefront";
+  ownerId: string;
+  companyId: string;
+  productId: string;
+  buyerUserId: string;
+  createdAt: Timestamp;
+}
+
+/**
+ * Record a Stacker payment for tracking
+ * Called after creating a one-click payment via Whop API
+ */
+export async function createStackerPayment(data: {
+  whopPaymentId: string;
+  source: "upsell" | "downsell" | "storefront";
+  ownerId: string;
+  companyId: string;
+  productId: string;
+  buyerUserId: string;
+}): Promise<string> {
+  const docRef = await db.collection("stackerPayments").add({
+    whopPaymentId: data.whopPaymentId,
+    source: data.source,
+    ownerId: data.ownerId,
+    companyId: data.companyId,
+    productId: data.productId,
+    buyerUserId: data.buyerUserId,
+    createdAt: Timestamp.now(),
+  });
+
+  console.log("Stacker payment tracked:", docRef.id, "whopPaymentId:", data.whopPaymentId);
+  return docRef.id;
+}
+
+/**
+ * Look up a Stacker payment by Whop payment ID
+ * Returns the payment record if found, null otherwise
+ */
+export async function getStackerPaymentByWhopId(whopPaymentId: string): Promise<StackerPayment | null> {
+  const snapshot = await db
+    .collection("stackerPayments")
+    .where("whopPaymentId", "==", whopPaymentId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() } as StackerPayment;
+}
+
+/**
+ * Delete a Stacker payment record after processing
+ * Called after the webhook has recorded the transaction
+ */
+export async function deleteStackerPayment(id: string): Promise<void> {
+  await db.collection("stackerPayments").doc(id).delete();
+  console.log("Stacker payment record deleted:", id);
+}
+

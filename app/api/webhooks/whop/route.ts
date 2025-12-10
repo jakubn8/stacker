@@ -16,6 +16,9 @@ import {
   recordUpsellConversion,
   getExperienceIdByCompanyId,
   createOfferSession,
+  getStackerPaymentByWhopId,
+  deleteStackerPayment,
+  getUser,
   type FlowId,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
@@ -158,41 +161,76 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   }
 
   // IMPORTANT: Only charge 5% fee on sales that came through Stacker
-  // We identify Stacker sales by their metadata:
-  // 1. stacker_offer_type = "upsell" or "downsell" (from offer page one-click checkout)
-  // 2. stacker_source = "storefront" (from storefront purchases)
-  // Without this metadata, it's a trigger product or direct Whop sale - don't charge
-  const isStackerUpsell = metadata?.stacker_offer_type === "upsell" || metadata?.stacker_offer_type === "downsell";
-  const isStackerStorefront = metadata?.stacker_source === "storefront";
-  const isStackerSale = isStackerUpsell || isStackerStorefront;
+  // We identify Stacker sales by:
+  // 1. Checkout session metadata (stacker_offer_type or stacker_source) - for checkout flows
+  // 2. Firestore stackerPayments collection - for one-click payments (payments.create doesn't support metadata)
+
+  // Check metadata first (from checkout sessions)
+  const isStackerFromMetadata =
+    metadata?.stacker_offer_type === "upsell" ||
+    metadata?.stacker_offer_type === "downsell" ||
+    metadata?.stacker_source === "storefront";
+
+  // Check Firestore for one-click payments
+  const stackerPaymentRecord = await getStackerPaymentByWhopId(paymentId);
+  const isStackerFromFirestore = !!stackerPaymentRecord;
+
+  const isStackerSale = isStackerFromMetadata || isStackerFromFirestore;
 
   if (!isStackerSale) {
-    console.log("Not a Stacker sale (no stacker metadata), skipping fee:", {
+    console.log("Not a Stacker sale, skipping fee:", {
       productId,
-      hasOfferType: !!metadata?.stacker_offer_type,
-      hasSource: !!metadata?.stacker_source,
+      hasMetadata: !!metadata?.stacker_offer_type || !!metadata?.stacker_source,
+      hasFirestoreRecord: isStackerFromFirestore,
     });
     return;
   }
 
+  // Determine sale source for logging
+  let saleSource = "unknown";
+  let effectiveOwnerId = user.id;
+  let effectiveProductId = productId;
+
+  if (isStackerFromFirestore && stackerPaymentRecord) {
+    saleSource = stackerPaymentRecord.source;
+    effectiveOwnerId = stackerPaymentRecord.ownerId;
+    effectiveProductId = stackerPaymentRecord.productId || productId;
+    // Clean up the tracking record
+    await deleteStackerPayment(stackerPaymentRecord.id);
+  } else if (metadata?.stacker_offer_type) {
+    saleSource = metadata.stacker_offer_type;
+  } else if (metadata?.stacker_source) {
+    saleSource = metadata.stacker_source;
+  }
+
   console.log("Stacker sale detected:", {
-    type: isStackerUpsell ? "upsell/downsell" : "storefront",
-    offerType: metadata?.stacker_offer_type,
-    source: metadata?.stacker_source,
-    productId,
+    source: saleSource,
+    fromMetadata: isStackerFromMetadata,
+    fromFirestore: isStackerFromFirestore,
+    productId: effectiveProductId,
     amount,
   });
 
+  // Use the correct owner ID (from Firestore record if available)
+  const ownerForTransaction = isStackerFromFirestore && stackerPaymentRecord
+    ? await getUser(stackerPaymentRecord.ownerId)
+    : user;
+
+  if (!ownerForTransaction) {
+    console.error("Owner not found for Stacker sale:", effectiveOwnerId);
+    return;
+  }
+
   // Get product name - first try our DB, then fall back to Whop API
   let productName = "Product";
-  const stackerProduct = await getStackerProduct(productId);
+  const stackerProduct = await getStackerProduct(effectiveProductId);
   if (stackerProduct) {
     productName = stackerProduct.name;
   } else {
     // Try to get product name from Whop
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const whopProduct = await (whopsdk.products as any).retrieve({ id: productId });
+      const whopProduct = await (whopsdk.products as any).retrieve({ id: effectiveProductId });
       productName = whopProduct?.title || "Product";
     } catch (err) {
       console.log("Could not fetch product name from Whop:", err);
@@ -201,21 +239,21 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
 
   // Create transaction record for this sale (5% fee applies)
   const transaction = await createTransaction({
-    userId: user.id,
+    userId: ownerForTransaction.id,
     whopPaymentId: paymentId,
-    productId,
+    productId: effectiveProductId,
     productName,
     saleAmount: amount / 100, // Convert cents to dollars
     currency,
   });
 
   // Increment total revenue for this user
-  await incrementTotalRevenue(user.id, amount);
+  await incrementTotalRevenue(ownerForTransaction.id, amount);
 
   // Record conversion for analytics
-  await recordUpsellConversion(user.id, amount);
+  await recordUpsellConversion(ownerForTransaction.id, amount);
 
-  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue:", amount, "cents", "Product:", productId);
+  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue:", amount, "cents", "Product:", effectiveProductId, "Source:", saleSource);
 
   // Note: Upsell notifications are handled via membership.activated webhook
   // This ensures a single source of truth for both free and paid products
