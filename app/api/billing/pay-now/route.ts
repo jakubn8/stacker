@@ -100,10 +100,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const checkoutConfig = await (whopsdk.checkoutConfigurations.create as any)({
-        company_id: STACKER_COMPANY_ID,
-        mode: "payment",
         redirect_url: redirectUrl,
         plan: {
+          company_id: STACKER_COMPANY_ID, // company_id goes inside plan object
           initial_price: Math.round(totalFee * 100), // Convert to cents
           currency: "usd",
           plan_type: "one_time",
