@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyOfferToken } from "@/lib/offer-tokens";
 import {
   getUserByWhopCompanyId,
-  recordUpsellConversion,
-  createTransaction,
   getOfferSession,
   getUser,
   migrateUserToFlows,
@@ -182,31 +180,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
-
-/**
- * This is called by the webhook after successful purchase
- * Records the conversion and creates a transaction
- */
-export async function recordOfferPurchase(data: {
-  ownerUserId: string;
-  buyerUserId: string;
-  productId: string;
-  productName: string;
-  amountCents: number;
-  whopPaymentId: string;
-  currency: string;
-}): Promise<void> {
-  // Record the conversion for analytics
-  await recordUpsellConversion(data.ownerUserId, data.amountCents);
-
-  // Create a transaction for billing purposes
-  await createTransaction({
-    userId: data.ownerUserId,
-    whopPaymentId: data.whopPaymentId,
-    productId: data.productId,
-    productName: data.productName,
-    saleAmount: data.amountCents / 100,
-    currency: data.currency,
-  });
 }

@@ -393,60 +393,6 @@ async function handleMembershipActivated(data: Record<string, unknown>): Promise
 }
 
 /**
- * Handle stacker upsell/downsell purchase
- * Called when we detect a purchase of a stacker upsell product
- */
-export async function handleStackerUpsellPurchase(data: {
-  paymentId: string;
-  companyId: string;
-  productId: string;
-  amountCents: number;
-  currency: string;
-  buyerUserId: string;
-  metadata?: Record<string, string>;
-}): Promise<void> {
-  const { paymentId, companyId, productId, amountCents, currency, metadata } = data;
-
-  // Check if this was from a Stacker upsell flow
-  if (!metadata?.stacker_offer_type) {
-    return;
-  }
-
-  // Get the community owner
-  const owner = await getUserByWhopCompanyId(companyId);
-  if (!owner) {
-    console.log("Owner not found for stacker upsell:", companyId);
-    return;
-  }
-
-  // Get product details
-  const product = await getStackerProduct(productId);
-  const productName = product?.name || "Upsell Product";
-
-  // Record the conversion for analytics
-  await recordUpsellConversion(owner.id, amountCents);
-
-  // Create transaction for billing
-  await createTransaction({
-    userId: owner.id,
-    whopPaymentId: paymentId,
-    productId,
-    productName,
-    saleAmount: amountCents / 100,
-    currency,
-  });
-
-  // Update total revenue
-  await incrementTotalRevenue(owner.id, amountCents);
-
-  console.log("Stacker upsell recorded:", {
-    ownerUserId: owner.id,
-    offerType: metadata.stacker_offer_type,
-    amount: amountCents,
-  });
-}
-
-/**
  * Get the Stacker app's experience_id for a given company
  * This is needed to send notifications to customers (not team members)
  *
