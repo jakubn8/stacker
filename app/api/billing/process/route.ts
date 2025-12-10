@@ -150,7 +150,7 @@ async function processBilling(request: NextRequest): Promise<NextResponse> {
             member_id: user.whopMemberId,
             payment_method_id: user.paymentMethodId,
             plan: {
-              initial_price: Math.round(totalFee * 100), // Convert to cents
+              initial_price: Math.round(totalFee * 100) / 100, // Price in dollars (not cents)
               currency: "usd",
               plan_type: "one_time",
               product: {
