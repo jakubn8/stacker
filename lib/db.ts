@@ -1182,8 +1182,46 @@ export async function getUserProducts(userId: string): Promise<StackerProduct[]>
 }
 
 export async function isStackerUpsell(whopProductId: string): Promise<boolean> {
-  const product = await getStackerProduct(whopProductId);
-  return product?.isUpsell || product?.isDownsell || false;
+  // Check if this product is configured as an upsell or downsell in any user's flow
+  // This is critical for tracking conversions and revenue
+  const flowIds = ["flow1", "flow2", "flow3"] as const;
+
+  for (const flowId of flowIds) {
+    // Check if product is an upsellProductId in any user's flow
+    const upsellSnapshot = await db
+      .collection("users")
+      .where(`flows.${flowId}.upsellProductId`, "==", whopProductId)
+      .limit(1)
+      .get();
+
+    if (!upsellSnapshot.empty) return true;
+
+    // Check if product is a downsellProductId in any user's flow
+    const downsellSnapshot = await db
+      .collection("users")
+      .where(`flows.${flowId}.downsellProductId`, "==", whopProductId)
+      .limit(1)
+      .get();
+
+    if (!downsellSnapshot.empty) return true;
+  }
+
+  // Also check legacy flowConfig for backwards compatibility
+  const legacyUpsellSnapshot = await db
+    .collection("users")
+    .where("flowConfig.upsellProductId", "==", whopProductId)
+    .limit(1)
+    .get();
+
+  if (!legacyUpsellSnapshot.empty) return true;
+
+  const legacyDownsellSnapshot = await db
+    .collection("users")
+    .where("flowConfig.downsellProductId", "==", whopProductId)
+    .limit(1)
+    .get();
+
+  return !legacyDownsellSnapshot.empty;
 }
 
 export async function updateProductRole(
