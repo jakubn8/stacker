@@ -1450,7 +1450,10 @@ export default function DashboardPage() {
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (!isToggleDisabled || flow.isActive) {
+                            if (isToggleDisabled && !flow.isActive) {
+                              // Show modal when trying to enable without payment method
+                              setShowPaymentRequiredModal(true);
+                            } else {
                               handleSetFlowActive(flowId, !flow.isActive);
                             }
                           }}
