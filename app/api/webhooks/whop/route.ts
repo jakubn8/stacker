@@ -78,7 +78,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 /**
  * Handle successful payments
- * - Track ALL sales from Stacker-enabled companies (for 5% fee)
+ * - Track sales that came through Stacker (upsells, downsells, storefront) for 5% fee
+ * - Uses metadata to identify Stacker sales vs direct Whop purchases
  * - If it's our Stacker billing charge that succeeded, mark invoice as paid
  */
 async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<void> {
@@ -97,12 +98,15 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   const amount = (data.total as number) || 0; // Amount in cents
   const currency = (data.currency as string) || "usd";
 
+  // Extract metadata - this tells us if the sale came through Stacker
+  const metadata = data.metadata as Record<string, string> | undefined;
+
   // Extract buyer info for upsell notifications
   const buyerUserId = (data.user_id as string) || userObj?.id || "";
   const buyerEmail = userObj?.email || null;
   const buyerMemberId = (data.member_id as string) || member?.id || "";
 
-  console.log("Payment succeeded parsed:", { paymentId, companyId, productId, amount });
+  console.log("Payment succeeded parsed:", { paymentId, companyId, productId, amount, metadata });
 
   // Validate required fields
   if (!paymentId || !companyId) {
@@ -153,13 +157,31 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     return;
   }
 
-  // Check if this product is synced to Stacker (upsell, downsell, or storefront)
-  // Only synced products are eligible for 5% fee - trigger products are NOT synced
-  const isSynced = user.syncedProductIds?.includes(productId) || false;
-  if (!isSynced) {
-    console.log("Product not synced to Stacker, skipping:", productId);
+  // IMPORTANT: Only charge 5% fee on sales that came through Stacker
+  // We identify Stacker sales by their metadata:
+  // 1. stacker_offer_type = "upsell" or "downsell" (from offer page one-click checkout)
+  // 2. stacker_source = "storefront" (from storefront purchases)
+  // Without this metadata, it's a trigger product or direct Whop sale - don't charge
+  const isStackerUpsell = metadata?.stacker_offer_type === "upsell" || metadata?.stacker_offer_type === "downsell";
+  const isStackerStorefront = metadata?.stacker_source === "storefront";
+  const isStackerSale = isStackerUpsell || isStackerStorefront;
+
+  if (!isStackerSale) {
+    console.log("Not a Stacker sale (no stacker metadata), skipping fee:", {
+      productId,
+      hasOfferType: !!metadata?.stacker_offer_type,
+      hasSource: !!metadata?.stacker_source,
+    });
     return;
   }
+
+  console.log("Stacker sale detected:", {
+    type: isStackerUpsell ? "upsell/downsell" : "storefront",
+    offerType: metadata?.stacker_offer_type,
+    source: metadata?.stacker_source,
+    productId,
+    amount,
+  });
 
   // Get product name - first try our DB, then fall back to Whop API
   let productName = "Product";

@@ -14,6 +14,7 @@ interface Product {
   billingPeriod: number | null;
   owned: boolean;
   checkoutUrl: string | null;
+  planId: string | null;
 }
 
 export default function ExperiencePage() {
@@ -24,6 +25,7 @@ export default function ExperiencePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [purchasingProductId, setPurchasingProductId] = useState<string | null>(null);
 
   // Fetch experience data and products
   useEffect(() => {
@@ -70,10 +72,49 @@ export default function ExperiencePage() {
     }).format(price);
   };
 
-  const handlePurchase = (product: Product) => {
-    // Redirect to Whop checkout for this product
-    if (product.checkoutUrl) {
-      window.location.href = product.checkoutUrl;
+  const handlePurchase = async (product: Product) => {
+    // Must have planId to create checkout
+    if (!product.planId || !companyId) {
+      console.error("Missing planId or companyId for checkout");
+      return;
+    }
+
+    setPurchasingProductId(product.id);
+
+    try {
+      // Call our checkout API to create a session with Stacker metadata
+      // This ensures storefront purchases are tracked for 5% fee
+      const response = await fetch("/api/storefront/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: product.planId,
+          companyId,
+          productId: product.id,
+          experienceId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.checkoutUrl) {
+        // Redirect to Whop checkout with Stacker metadata attached
+        window.location.href = data.checkoutUrl;
+      } else {
+        console.error("Failed to create checkout:", data.error);
+        // Fall back to direct checkout URL if API fails
+        if (product.checkoutUrl) {
+          window.location.href = product.checkoutUrl;
+        }
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      // Fall back to direct checkout URL on error
+      if (product.checkoutUrl) {
+        window.location.href = product.checkoutUrl;
+      }
+    } finally {
+      setPurchasingProductId(null);
     }
   };
 
@@ -177,10 +218,18 @@ export default function ExperiencePage() {
                   ) : (
                     <button
                       onClick={() => handlePurchase(product)}
-                      className="w-full py-2.5 rounded-lg font-medium text-white cursor-pointer transition-colors hover:opacity-90"
+                      disabled={purchasingProductId === product.id}
+                      className="w-full py-2.5 rounded-lg font-medium text-white cursor-pointer transition-colors hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
                       style={{ backgroundColor: '#FA4616' }}
                     >
-                      Buy
+                      {purchasingProductId === product.id ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          Processing...
+                        </span>
+                      ) : (
+                        "Buy"
+                      )}
                     </button>
                   )}
                 </div>
