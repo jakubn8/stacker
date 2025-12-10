@@ -423,7 +423,7 @@ export default function BillingPortalPage() {
                     <p className="text-zinc-500 text-sm mt-1">Transactions will appear here when upsells are made</p>
                   </div>
                 ) : (
-                  <div className="max-h-[280px] overflow-y-auto">
+                  <div className="max-h-[216px] overflow-y-auto">
                     <div className="divide-y divide-zinc-800">
                       {billingStatus.recentTransactions.map((t) => (
                         <div key={t.id} className="flex items-center justify-between p-4 hover:bg-zinc-800/30">
@@ -457,8 +457,9 @@ export default function BillingPortalPage() {
                   <div className="p-5 border-b border-zinc-800">
                     <h2 className="text-lg font-semibold text-white">Past Invoices</h2>
                   </div>
-                  <div className="divide-y divide-zinc-800">
-                    {billingStatus.recentInvoices.map((i) => (
+                  <div className="max-h-[216px] overflow-y-auto">
+                    <div className="divide-y divide-zinc-800">
+                      {billingStatus.recentInvoices.map((i) => (
                       <div key={i.id} className="flex items-center justify-between p-4 hover:bg-zinc-800/30">
                         <div className="flex items-center gap-3">
                           <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
@@ -491,7 +492,8 @@ export default function BillingPortalPage() {
                           </span>
                         </div>
                       </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
