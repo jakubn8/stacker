@@ -184,11 +184,11 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   // Increment total revenue for this user (amount is already in cents)
   await incrementTotalRevenue(user.id, amount);
 
-  // Check if this was an upsell/downsell for conversion tracking
+  // Record conversion for ALL sales (5% fee applies to upsells AND storefront)
+  await recordUpsellConversion(user.id, amount);
+
+  // Check if this was specifically an upsell/downsell (for logging)
   const isUpsell = await isStackerUpsell(productId);
-  if (isUpsell) {
-    await recordUpsellConversion(user.id, amount);
-  }
 
   console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents", isUpsell ? "(upsell)" : "(storefront)");
 
