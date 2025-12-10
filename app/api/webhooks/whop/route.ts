@@ -314,7 +314,11 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
   const metadata = data.metadata as Record<string, string> | undefined;
   const userId = metadata?.stacker_user_id;
 
-  console.log("Setup intent succeeded:", { paymentMethodId, userId, card: paymentMethodObj?.card });
+  // Extract member ID (mber_xxx) - required for billing charges
+  const memberObj = data.member as { id?: string } | undefined;
+  const whopMemberId = (data.member_id as string) || memberObj?.id;
+
+  console.log("Setup intent succeeded:", { paymentMethodId, userId, whopMemberId, card: paymentMethodObj?.card });
 
   if (!userId) {
     console.log("No user ID in setup intent metadata");
@@ -326,9 +330,9 @@ async function handleSetupIntentSucceeded(data: Record<string, unknown>): Promis
     return;
   }
 
-  // Update user with payment method
-  await updateUserPaymentMethod(userId, paymentMethodId);
-  console.log("Payment method saved for user:", userId);
+  // Update user with payment method and member ID
+  await updateUserPaymentMethod(userId, paymentMethodId, whopMemberId);
+  console.log("Payment method saved for user:", userId, "member ID:", whopMemberId);
 }
 
 /**

@@ -621,20 +621,28 @@ export async function createUser(data: {
 
 export async function updateUserPaymentMethod(
   userId: string,
-  paymentMethodId: string
+  paymentMethodId: string,
+  whopMemberId?: string
 ): Promise<void> {
   const now = Timestamp.now();
   const sevenDaysFromNow = Timestamp.fromDate(
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   );
 
-  await db.collection("users").doc(userId).update({
+  const updateData: Record<string, unknown> = {
     paymentMethodId,
     paymentMethodConnected: true,
     billingCycleStart: now,
     nextBillingDate: sevenDaysFromNow,
     updatedAt: now,
-  });
+  };
+
+  // Also save member ID if provided (required for billing charges)
+  if (whopMemberId) {
+    updateData.whopMemberId = whopMemberId;
+  }
+
+  await db.collection("users").doc(userId).update(updateData);
 }
 
 export async function updateUserNextBillingDate(
