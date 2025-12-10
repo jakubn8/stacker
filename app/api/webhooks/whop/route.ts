@@ -117,6 +117,8 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     return;
   }
 
+  console.log("Step 1: Checking if Stacker billing charge...");
+
   // Check if this is our Stacker billing charge (paid to us)
   if (companyId === STACKER_COMPANY_ID) {
     // This is a billing payment TO us
@@ -146,19 +148,27 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     return;
   }
 
+  console.log("Step 2: Checking if payment already processed...");
+
   // Check if we've already processed this payment (idempotency)
   const exists = await transactionExists(paymentId);
+  console.log("Step 2 result: transactionExists =", exists);
   if (exists) {
     console.log("Payment already processed:", paymentId);
     return;
   }
 
+  console.log("Step 3: Looking up user by companyId:", companyId);
+
   // Check if this company belongs to a Stacker user
   const user = await getUserByWhopCompanyId(companyId);
+  console.log("Step 3 result: user found =", !!user, user?.id);
   if (!user) {
     console.log("Company not registered with Stacker, skipping:", companyId);
     return;
   }
+
+  console.log("Step 4: Checking if Stacker sale...");
 
   // IMPORTANT: Only charge 5% fee on sales that came through Stacker
   // We identify Stacker sales by:
@@ -171,11 +181,16 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     metadata?.stacker_offer_type === "downsell" ||
     metadata?.stacker_source === "storefront";
 
+  console.log("Step 4a: isStackerFromMetadata =", isStackerFromMetadata, "offer_type:", metadata?.stacker_offer_type);
+
   // Check Firestore for one-click payments
   const stackerPaymentRecord = await getStackerPaymentByWhopId(paymentId);
   const isStackerFromFirestore = !!stackerPaymentRecord;
 
+  console.log("Step 4b: isStackerFromFirestore =", isStackerFromFirestore);
+
   const isStackerSale = isStackerFromMetadata || isStackerFromFirestore;
+  console.log("Step 4c: isStackerSale =", isStackerSale);
 
   if (!isStackerSale) {
     console.log("Not a Stacker sale, skipping fee:", {
