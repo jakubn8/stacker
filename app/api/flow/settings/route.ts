@@ -7,6 +7,7 @@ import {
   updateFlow,
   updateFlowNotificationSettings,
   updateFlowOfferSettings,
+  addSyncedProducts,
   type OfferPageSettings,
   type FlowId,
 } from "@/lib/db";
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  * POST /api/flow/settings
  * Save flow config and/or offer settings
  * Now supports flowId to update specific flow
- * Body: { whopUserId, companyId?, flowId?, flowConfig?, upsellSettings?, downsellSettings?, notificationSettings?, hiddenProductIds? }
+ * Body: { whopUserId, companyId?, flowId?, flowConfig?, upsellSettings?, downsellSettings?, notificationSettings?, hiddenProductIds?, storefrontProductIds? }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -103,7 +104,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       upsellSettings,
       downsellSettings,
       notificationSettings,
-      hiddenProductIds
+      hiddenProductIds,
+      storefrontProductIds, // Visible storefront products to sync for 5% fee
     } = body;
 
     // Try to verify authentication from token
@@ -154,6 +156,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (Object.keys(flowUpdates).length > 0) {
         await updateFlow(user.id, targetFlowId, flowUpdates);
       }
+
+      // Add upsell/downsell products to syncedProductIds (NOT trigger - that's sold on Whop, not through Stacker)
+      const productsToSync: string[] = [];
+      if (flowConfig.upsellProductId) productsToSync.push(flowConfig.upsellProductId);
+      if (flowConfig.downsellProductId) productsToSync.push(flowConfig.downsellProductId);
+
+      if (productsToSync.length > 0) {
+        await addSyncedProducts(user.id, productsToSync);
+      }
     }
 
     // Update upsell settings if provided
@@ -174,6 +185,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Update hidden products if provided (not flow-specific)
     if (hiddenProductIds !== undefined) {
       await updateHiddenProducts(user.id, hiddenProductIds as string[]);
+    }
+
+    // Sync storefront products (visible products eligible for 5% fee)
+    if (storefrontProductIds && Array.isArray(storefrontProductIds) && storefrontProductIds.length > 0) {
+      await addSyncedProducts(user.id, storefrontProductIds as string[]);
     }
 
     return NextResponse.json({

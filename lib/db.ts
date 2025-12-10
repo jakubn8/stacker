@@ -102,6 +102,9 @@ export interface User {
   notificationSettings: NotificationSettings;
   // Hidden products (not shown in storefront)
   hiddenProductIds: string[];
+  // Synced products (eligible for 5% fee - upsells, downsells, storefront)
+  // Does NOT include trigger products (those are sold on Whop, not through Stacker)
+  syncedProductIds: string[];
   // Custom product images (productId -> imageUrl)
   productImages: Record<string, string>;
   // Legacy field - kept for backwards compatibility
@@ -605,6 +608,7 @@ export async function createUser(data: {
     offerSettings: DEFAULT_OFFER_SETTINGS,
     notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
     hiddenProductIds: [],
+    syncedProductIds: [],
     productImages: {},
     productOverrides: {},
     createdAt: now,
@@ -855,6 +859,79 @@ export async function getHiddenProducts(userId: string): Promise<string[]> {
   const user = await getUser(userId);
   if (!user) return [];
   return user.hiddenProductIds || [];
+}
+
+// ============================================
+// SYNCED PRODUCTS FUNCTIONS
+// Synced products = eligible for 5% fee (upsells, downsells, storefront)
+// Does NOT include trigger products
+// ============================================
+
+/**
+ * Add product IDs to the synced products list
+ * Used when admin selects products as upsells/downsells or shows them in storefront
+ */
+export async function addSyncedProducts(
+  userId: string,
+  productIds: string[]
+): Promise<void> {
+  if (productIds.length === 0) return;
+
+  await db.collection("users").doc(userId).update({
+    syncedProductIds: FieldValue.arrayUnion(...productIds),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Remove product IDs from the synced products list
+ * Used when admin removes products from upsells/downsells or hides them from storefront
+ */
+export async function removeSyncedProducts(
+  userId: string,
+  productIds: string[]
+): Promise<void> {
+  if (productIds.length === 0) return;
+
+  await db.collection("users").doc(userId).update({
+    syncedProductIds: FieldValue.arrayRemove(...productIds),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Check if a product is synced (eligible for 5% fee)
+ * Simple array lookup - much faster than querying flow configs
+ */
+export async function isProductSynced(
+  userId: string,
+  productId: string
+): Promise<boolean> {
+  const user = await getUser(userId);
+  if (!user) return false;
+  return user.syncedProductIds?.includes(productId) || false;
+}
+
+/**
+ * Check if a product is synced by company ID
+ * Used by webhook handler
+ */
+export async function isProductSyncedByCompany(
+  companyId: string,
+  productId: string
+): Promise<boolean> {
+  const user = await getUserByWhopCompanyId(companyId);
+  if (!user) return false;
+  return user.syncedProductIds?.includes(productId) || false;
+}
+
+/**
+ * Get all synced product IDs for a user
+ */
+export async function getSyncedProducts(userId: string): Promise<string[]> {
+  const user = await getUser(userId);
+  if (!user) return [];
+  return user.syncedProductIds || [];
 }
 
 export async function updateProductImage(

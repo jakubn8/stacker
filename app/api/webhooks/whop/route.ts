@@ -5,7 +5,6 @@ import {
   createTransaction,
   transactionExists,
   updateUserPaymentMethod,
-  isStackerUpsell,
   getStackerProduct,
   updateInvoiceStatus,
   getInvoiceByWhopPaymentId,
@@ -148,10 +147,17 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   }
 
   // Check if this company belongs to a Stacker user
-  // If yes, we track ALL their sales for our 5% fee
   const user = await getUserByWhopCompanyId(companyId);
   if (!user) {
     console.log("Company not registered with Stacker, skipping:", companyId);
+    return;
+  }
+
+  // Check if this product is synced to Stacker (upsell, downsell, or storefront)
+  // Only synced products are eligible for 5% fee - trigger products are NOT synced
+  const isSynced = user.syncedProductIds?.includes(productId) || false;
+  if (!isSynced) {
+    console.log("Product not synced to Stacker, skipping:", productId);
     return;
   }
 
@@ -171,7 +177,7 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     }
   }
 
-  // Create transaction record for this sale
+  // Create transaction record for this sale (5% fee applies)
   const transaction = await createTransaction({
     userId: user.id,
     whopPaymentId: paymentId,
@@ -181,16 +187,13 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     currency,
   });
 
-  // Increment total revenue for this user (amount is already in cents)
+  // Increment total revenue for this user
   await incrementTotalRevenue(user.id, amount);
 
-  // Record conversion for ALL sales (5% fee applies to upsells AND storefront)
+  // Record conversion for analytics
   await recordUpsellConversion(user.id, amount);
 
-  // Check if this was specifically an upsell/downsell (for logging)
-  const isUpsell = await isStackerUpsell(productId);
-
-  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue added:", amount, "cents", isUpsell ? "(upsell)" : "(storefront)");
+  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue:", amount, "cents", "Product:", productId);
 
   // Note: Upsell notifications are handled via membership.activated webhook
   // This ensures a single source of truth for both free and paid products
