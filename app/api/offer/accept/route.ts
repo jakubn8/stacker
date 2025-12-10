@@ -163,28 +163,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Use the first (most recent) payment method
     const paymentMethodId = paymentMethods[0].id;
 
-    // Create ONE-CLICK payment using existing product
+    // Create ONE-CLICK payment using existing plan
     // See: https://docs.whop.com/api-reference/payments/create-payment
-    // Use product_id to reference existing product, currency is required
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const planInfo = planData as any;
-    const price = planInfo.initial_price || planInfo.price || 0;
-    const currency = planInfo.currency || "usd";
-    const planType = planInfo.renewal_price ? "renewal" : "one_time";
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const payment = await (whopsdk.payments as any).create({
-      plan: {
-        currency: currency,
-        product_id: productId,
-        initial_price: price,
-        plan_type: planType,
-        ...(planType === "renewal" && { renewal_price: planInfo.renewal_price }),
+    // Using REST API directly since SDK (GraphQL) doesn't support plan.id
+    const response = await fetch("https://api.whop.com/api/v5/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.WHOP_API_KEY}`,
       },
-      company_id: companyId,
-      member_id: buyerMemberId,
-      payment_method_id: paymentMethodId,
+      body: JSON.stringify({
+        company_id: companyId,
+        member_id: buyerMemberId,
+        payment_method_id: paymentMethodId,
+        plan: {
+          id: planData.id,  // Reference existing plan by ID
+        },
+      }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Payment API error:", errorData);
+      throw new Error(errorData.error?.message || "Payment failed");
+    }
+
+    const payment = await response.json();
 
     console.log("One-click payment initiated:", payment.id);
 
