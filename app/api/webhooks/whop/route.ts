@@ -11,7 +11,6 @@ import {
   markTransactionsAsInvoiced,
   updateUserNextBillingDate,
   updateBillingStatus,
-  incrementTotalRevenue,
   canRunAnyUpsellFlow,
   recordUpsellConversion,
   getExperienceIdByCompanyId,
@@ -265,10 +264,8 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     currency,
   });
 
-  // Increment total revenue for this user (expects cents)
-  await incrementTotalRevenue(ownerForTransaction.id, amountCents);
-
-  // Record conversion for analytics (expects cents)
+  // Record conversion for analytics and increment total revenue (expects cents)
+  // Note: recordUpsellConversion already increments totalRevenueGeneratedCents
   await recordUpsellConversion(ownerForTransaction.id, amountCents);
 
   console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue:", amountCents, "cents", "Product:", effectiveProductId, "Source:", saleSource);
