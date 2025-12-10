@@ -103,7 +103,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         redirect_url: redirectUrl,
         plan: {
           company_id: STACKER_COMPANY_ID, // company_id goes inside plan object
-          initial_price: Math.round(totalFee * 100), // Convert to cents
+          initial_price: totalFee, // Price in dollars (not cents like payments.create)
           currency: "usd",
           plan_type: "one_time",
           product: {
