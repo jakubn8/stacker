@@ -166,27 +166,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Create ONE-CLICK payment using existing plan (CreatePaymentInputWithPlanId)
     // See: https://docs.whop.com/api-reference/payments/create-payment
     // Use plan_id at TOP LEVEL (not nested in plan object)
-    const response = await fetch("https://api.whop.com/api/v5/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.WHOP_API_KEY}`,
-      },
-      body: JSON.stringify({
-        company_id: companyId,
-        member_id: buyerMemberId,
-        payment_method_id: paymentMethodId,
-        plan_id: planData.id,  // TOP LEVEL - uses existing plan
-      }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payment = await (whopsdk.payments as any).create({
+      company_id: companyId,
+      member_id: buyerMemberId,
+      payment_method_id: paymentMethodId,
+      plan_id: planData.id,  // TOP LEVEL - uses existing plan
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Payment API error:", errorData);
-      throw new Error(errorData.error?.message || "Payment failed");
-    }
-
-    const payment = await response.json();
 
     console.log("One-click payment initiated:", payment.id);
 
