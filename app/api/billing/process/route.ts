@@ -25,7 +25,16 @@ const MINIMUM_FEE_TO_CHARGE = 1.0; // $1.00
  *
  * Security: Verify the request is from a trusted source
  */
+// Support both GET (Vercel Cron) and POST (manual trigger)
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return processBilling(request);
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  return processBilling(request);
+}
+
+async function processBilling(request: NextRequest): Promise<NextResponse> {
   try {
     // Verify the cron secret to prevent unauthorized access
     const authHeader = request.headers.get("authorization");

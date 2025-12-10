@@ -119,23 +119,6 @@ export default async function DashboardLayout({
     return <AuthProvider user={contextUser}>{children}</AuthProvider>;
   }
 
-  // In development only, allow bypassing auth for testing
-  const isDev = process.env.NODE_ENV === "development";
-  const bypassAuth = isDev && process.env.BYPASS_AUTH === "true";
-
-  if (bypassAuth) {
-    // Development mode with auth bypass - only used when no real auth is available
-    const mockUser: AuthContextUser = {
-      whopUserId: "dev_user_123",
-      dbUserId: null,
-      whopCompanyId: "dev_company_123",
-      email: "dev@example.com",
-      isAdmin: true,
-    };
-
-    return <AuthProvider user={mockUser}>{children}</AuthProvider>;
-  }
-
   // No authentication available
   return <AuthError message={authResult.error || "Please sign in to continue"} />;
 }
