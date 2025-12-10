@@ -163,14 +163,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Use the first (most recent) payment method
     const paymentMethodId = paymentMethods[0].id;
 
-    // Create ONE-CLICK payment directly using existing plan_id
+    // Create ONE-CLICK payment using existing plan
+    // See: https://docs.whop.com/api-reference/payments/create-payment
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payment = await (whopsdk.payments as any).create({
-      plan_id: planData.id,  // Use existing plan instead of inline plan (avoids plan:create permission)
+      plan: {
+        id: planData.id,  // Reference existing plan by ID
+      },
       company_id: companyId,
       member_id: buyerMemberId,
       payment_method_id: paymentMethodId,
-      // Note: payments.create doesn't support metadata, so we track in Firestore instead
     });
 
     console.log("One-click payment initiated:", payment.id);
