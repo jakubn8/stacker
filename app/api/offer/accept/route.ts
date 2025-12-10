@@ -163,21 +163,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Use the first (most recent) payment method
     const paymentMethodId = paymentMethods[0].id;
 
-    // Create ONE-CLICK payment directly
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const planInfo = planData as any;
-    const price = planInfo.initial_price || planInfo.price || 0;
-    const currency = planInfo.currency || "usd";
-    const planType = planInfo.renewal_price ? "renewal" : "one_time";
-
+    // Create ONE-CLICK payment directly using existing plan_id
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payment = await (whopsdk.payments as any).create({
-      plan: {
-        initial_price: price,
-        currency: currency,
-        plan_type: planType,
-        ...(planType === "renewal" && { renewal_price: planInfo.renewal_price }),
-      },
+      plan_id: planData.id,  // Use existing plan instead of inline plan (avoids plan:create permission)
       company_id: companyId,
       member_id: buyerMemberId,
       payment_method_id: paymentMethodId,
