@@ -518,7 +518,6 @@ export default function DashboardPage() {
     try {
       setRetryingPayment(true);
       setBillingError(null);
-      // Use authenticated user ID
 
       const response = await fetch("/api/billing/retry", {
         method: "POST",
@@ -530,14 +529,41 @@ export default function DashboardPage() {
 
       if (data.success) {
         setBillingSuccess(true);
-        fetchBillingStatus();
+        // Payment is processed async by Whop - poll for status change
+        // Keep showing "Processing..." while we wait for webhook to update status
+        const pollForStatusChange = async (attempts = 0): Promise<void> => {
+          if (attempts >= 5) {
+            // Max 10 seconds of polling - refresh anyway
+            await fetchBillingStatus();
+            setRetryingPayment(false);
+            return;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
+          const statusResponse = await fetch(`/api/billing/status?whopUserId=${whopUserId}`);
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            if (statusData.billing?.status === "active") {
+              // Payment succeeded! Update state
+              setBillingStatus(statusData);
+              setRetryingPayment(false);
+              return;
+            }
+          }
+
+          // Keep polling
+          await pollForStatusChange(attempts + 1);
+        };
+
+        await pollForStatusChange();
       } else {
         setBillingError(data.error || "Payment retry failed. Please try a different card.");
+        setRetryingPayment(false);
       }
     } catch (error) {
       console.error("Failed to retry payment:", error);
       setBillingError("Failed to retry payment. Please try again.");
-    } finally {
       setRetryingPayment(false);
     }
   };
@@ -1001,7 +1027,7 @@ export default function DashboardPage() {
                       {retryingPayment ? (
                         <>
                           <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Retrying...
+                          Processing...
                         </>
                       ) : (
                         <>
@@ -1061,7 +1087,7 @@ export default function DashboardPage() {
                       {retryingPayment ? (
                         <>
                           <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Retrying...
+                          Processing...
                         </>
                       ) : (
                         <>

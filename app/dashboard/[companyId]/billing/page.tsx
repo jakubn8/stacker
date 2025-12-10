@@ -121,14 +121,45 @@ export default function BillingPortalPage() {
       const data = await response.json();
 
       if (data.success) {
-        fetchBillingStatus();
+        // Payment is processed async by Whop - poll for status change
+        const pollForStatusChange = async (attempts = 0): Promise<void> => {
+          if (attempts >= 5) {
+            // Max attempts reached, just fetch current status
+            await fetchBillingStatus();
+            setRetryingPayment(false);
+            return;
+          }
+
+          // Wait 2 seconds between polls
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          try {
+            const statusResponse = await fetch(`/api/billing/status?whopUserId=${whopUserId}`);
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData.billing?.status === "active") {
+                // Payment succeeded! Update UI
+                setBillingStatus(statusData);
+                setRetryingPayment(false);
+                return;
+              }
+            }
+          } catch {
+            // Ignore polling errors
+          }
+
+          // Continue polling
+          await pollForStatusChange(attempts + 1);
+        };
+
+        await pollForStatusChange();
       } else {
         setError(data.error || "Payment retry failed. Please try a different card.");
+        setRetryingPayment(false);
       }
     } catch (err) {
       console.error("Failed to retry payment:", err);
       setError("Failed to retry payment. Please try again.");
-    } finally {
       setRetryingPayment(false);
     }
   };
@@ -242,7 +273,7 @@ export default function BillingPortalPage() {
                       disabled={retryingPayment}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
-                      {retryingPayment ? "Retrying..." : "Retry Payment"}
+                      {retryingPayment ? "Processing..." : "Retry Payment"}
                     </button>
                     <button
                       onClick={handleUpdatePaymentMethod}
@@ -278,7 +309,7 @@ export default function BillingPortalPage() {
                       disabled={retryingPayment}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
-                      {retryingPayment ? "Retrying..." : "Retry Payment"}
+                      {retryingPayment ? "Processing..." : "Retry Payment"}
                     </button>
                     <button
                       onClick={handleUpdatePaymentMethod}
