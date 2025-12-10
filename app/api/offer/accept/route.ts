@@ -163,9 +163,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Use the first (most recent) payment method
     const paymentMethodId = paymentMethods[0].id;
 
-    // Create ONE-CLICK payment using existing plan
+    // Create ONE-CLICK payment using existing plan (CreatePaymentInputWithPlanId)
     // See: https://docs.whop.com/api-reference/payments/create-payment
-    // Using REST API directly since SDK (GraphQL) doesn't support plan.id
+    // Use plan_id at TOP LEVEL (not nested in plan object)
     const response = await fetch("https://api.whop.com/api/v5/payments", {
       method: "POST",
       headers: {
@@ -176,9 +176,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         company_id: companyId,
         member_id: buyerMemberId,
         payment_method_id: paymentMethodId,
-        plan: {
-          id: planData.id,  // Reference existing plan by ID
-        },
+        plan_id: planData.id,  // TOP LEVEL - uses existing plan
       }),
     });
 
