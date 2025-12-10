@@ -419,28 +419,30 @@ export default function BillingPortalPage() {
                     <p className="text-zinc-500 text-sm mt-1">Transactions will appear here when upsells are made</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-zinc-800">
-                    {billingStatus.recentTransactions.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between p-4 hover:bg-zinc-800/30">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                            <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                  <div className="max-h-[280px] overflow-y-auto">
+                    <div className="divide-y divide-zinc-800">
+                      {billingStatus.recentTransactions.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between p-4 hover:bg-zinc-800/30">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">{t.productName}</p>
+                              <p className="text-zinc-500 text-sm">
+                                {new Date(t.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-white font-medium">{t.productName}</p>
-                            <p className="text-zinc-500 text-sm">
-                              {new Date(t.createdAt).toLocaleDateString()}
-                            </p>
+                          <div className="text-right">
+                            <p className="text-white font-medium">${t.saleAmount.toFixed(2)} sale</p>
+                            <p className="text-green-400 text-sm">${t.feeAmount.toFixed(2)} fee</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-white font-medium">${t.saleAmount.toFixed(2)} sale</p>
-                          <p className="text-green-400 text-sm">${t.feeAmount.toFixed(2)} fee</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
