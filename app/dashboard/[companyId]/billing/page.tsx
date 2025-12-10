@@ -54,7 +54,6 @@ export default function BillingPortalPage() {
   const [loading, setLoading] = useState(true);
   const [connectingPayment, setConnectingPayment] = useState(false);
   const [retryingPayment, setRetryingPayment] = useState(false);
-  const [payingNow, setPayingNow] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBillingStatus = useCallback(async () => {
@@ -131,32 +130,6 @@ export default function BillingPortalPage() {
       setError("Failed to retry payment. Please try again.");
     } finally {
       setRetryingPayment(false);
-    }
-  };
-
-  const handlePayNow = async () => {
-    try {
-      setPayingNow(true);
-      setError(null);
-
-      const response = await fetch("/api/billing/pay-now", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ whopUserId: whopUserId }),
-      });
-
-      const data = await response.json();
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        setError(data.error || "Failed to create checkout. Please try again.");
-      }
-    } catch (err) {
-      console.error("Failed to pay now:", err);
-      setError("Failed to create payment. Please try again.");
-    } finally {
-      setPayingNow(false);
     }
   };
 
@@ -272,11 +245,11 @@ export default function BillingPortalPage() {
                       {retryingPayment ? "Retrying..." : "Retry Payment"}
                     </button>
                     <button
-                      onClick={handlePayNow}
-                      disabled={payingNow}
+                      onClick={handleUpdatePaymentMethod}
+                      disabled={connectingPayment}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
-                      {payingNow ? "Loading..." : "Pay with Different Card"}
+                      {connectingPayment ? "Loading..." : "Update Payment Method"}
                     </button>
                   </div>
                 </div>
@@ -301,11 +274,11 @@ export default function BillingPortalPage() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={handlePayNow}
-                      disabled={payingNow}
+                      onClick={handleRetryPayment}
+                      disabled={retryingPayment}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
-                      {payingNow ? "Loading..." : "Pay Now to Unlock"}
+                      {retryingPayment ? "Retrying..." : "Retry Payment"}
                     </button>
                     <button
                       onClick={handleUpdatePaymentMethod}

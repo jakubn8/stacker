@@ -180,7 +180,6 @@ export default function DashboardPage() {
   const [connectingPayment, setConnectingPayment] = useState(false);
   const [billingSuccess, setBillingSuccess] = useState(false);
   const [retryingPayment, setRetryingPayment] = useState(false);
-  const [payingNow, setPayingNow] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
 
   // Analytics state
@@ -540,34 +539,6 @@ export default function DashboardPage() {
       setBillingError("Failed to retry payment. Please try again.");
     } finally {
       setRetryingPayment(false);
-    }
-  };
-
-  // Pay now with any card (one-time checkout)
-  const handlePayNow = async () => {
-    try {
-      setPayingNow(true);
-      setBillingError(null);
-      // Use authenticated user ID
-
-      const response = await fetch("/api/billing/pay-now", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ whopUserId: whopUserId }),
-      });
-
-      const data = await response.json();
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        setBillingError(data.error || "Failed to create checkout. Please try again.");
-      }
-    } catch (error) {
-      console.error("Failed to pay now:", error);
-      setBillingError("Failed to create payment. Please try again.");
-    } finally {
-      setPayingNow(false);
     }
   };
 
@@ -1042,11 +1013,11 @@ export default function DashboardPage() {
                       )}
                     </button>
                     <button
-                      onClick={handlePayNow}
-                      disabled={payingNow}
+                      onClick={handleUpdatePaymentMethod}
+                      disabled={connectingPayment}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
-                      {payingNow ? (
+                      {connectingPayment ? (
                         <>
                           <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           Loading...
@@ -1056,7 +1027,7 @@ export default function DashboardPage() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                           </svg>
-                          Pay with Different Card
+                          Update Payment Method
                         </>
                       )}
                     </button>
@@ -1083,21 +1054,21 @@ export default function DashboardPage() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={handlePayNow}
-                      disabled={payingNow}
+                      onClick={handleRetryPayment}
+                      disabled={retryingPayment}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
-                      {payingNow ? (
+                      {retryingPayment ? (
                         <>
                           <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Loading...
+                          Retrying...
                         </>
                       ) : (
                         <>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
-                          Pay Now to Unlock
+                          Retry Payment
                         </>
                       )}
                     </button>
@@ -1222,27 +1193,6 @@ export default function DashboardPage() {
 
                 {/* Payment Actions */}
                 <div className="flex flex-wrap items-center gap-3">
-                  {billingStatus.billing.pendingFee >= 0.50 && billingStatus.billing.status === "active" && (
-                    <button
-                      onClick={handlePayNow}
-                      disabled={payingNow}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
-                    >
-                      {payingNow ? (
-                        <>
-                          <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                          Pay Early
-                        </>
-                      )}
-                    </button>
-                  )}
                   <button
                     onClick={handleUpdatePaymentMethod}
                     disabled={connectingPayment}
