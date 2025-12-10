@@ -1445,12 +1445,17 @@ export default function DashboardPage() {
                     )}
                     {/* Active Toggle */}
                     {(() => {
-                      const isToggleDisabled = billingStatus?.billing?.status === "unpaid_lockout" || !billingStatus?.user?.paymentMethodConnected;
+                      const isPaymentDisabled = billingStatus?.billing?.status === "unpaid_lockout" || !billingStatus?.user?.paymentMethodConnected;
+                      const isMissingProducts = !flow.triggerProductId || !flow.upsellProductId;
+                      const isToggleDisabled = isPaymentDisabled || isMissingProducts;
                       return (
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isToggleDisabled && !flow.isActive) {
+                            if (!flow.isActive && isMissingProducts) {
+                              // Show alert when trying to enable without products
+                              alert("Please select a trigger product (Step 1) and upsell product (Step 2) before activating this flow.");
+                            } else if (!flow.isActive && isPaymentDisabled) {
                               // Show modal when trying to enable without payment method
                               setShowPaymentRequiredModal(true);
                             } else {
@@ -1458,7 +1463,7 @@ export default function DashboardPage() {
                             }
                           }}
                           className={`flex items-center gap-2 ${isToggleDisabled && !flow.isActive ? "opacity-50 cursor-not-allowed" : ""}`}
-                          title={isToggleDisabled && !flow.isActive ? (billingStatus?.billing?.status === "unpaid_lockout" ? "Pay outstanding balance to enable" : "Connect payment method to enable") : undefined}
+                          title={isToggleDisabled && !flow.isActive ? (isMissingProducts ? "Select trigger and upsell products first" : billingStatus?.billing?.status === "unpaid_lockout" ? "Pay outstanding balance to enable" : "Connect payment method to enable") : undefined}
                         >
                           <span className="text-xs sm:text-sm font-medium text-zinc-400 hidden sm:inline">
                             {flow.isActive ? "Active" : "Inactive"}
