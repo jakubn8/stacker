@@ -932,7 +932,6 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <p className="stats-card-footer text-zinc-500 text-sm mt-4">+${analytics.weeklyRevenue.toFixed(2)} this week</p>
           </div>
 
           {/* Conversion Rate Card */}
@@ -958,7 +957,6 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <p className="stats-card-footer text-zinc-500 text-sm mt-4">{analytics.totalConversions} conversions from {analytics.totalViews} views</p>
           </div>
         </div>
 

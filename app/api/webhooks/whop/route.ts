@@ -98,7 +98,9 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   const paymentId = (data.id as string) || "";
   const companyId = (data.company_id as string) || company?.id || "";
   const productId = (data.product_id as string) || product?.id || "";
-  const amount = (data.total as number) || 0; // Amount in cents
+  // Whop sends total in DOLLARS (e.g., 1.2 = $1.20), convert to cents for internal tracking
+  const amountDollars = (data.total as number) || 0;
+  const amountCents = Math.round(amountDollars * 100); // Convert to cents
   const currency = (data.currency as string) || "usd";
 
   // Extract metadata - this tells us if the sale came through Stacker
@@ -109,7 +111,7 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   const buyerEmail = userObj?.email || null;
   const buyerMemberId = (data.member_id as string) || member?.id || "";
 
-  console.log("Payment succeeded parsed:", { paymentId, companyId, productId, amount, metadata });
+  console.log("Payment succeeded parsed:", { paymentId, companyId, productId, amountDollars, amountCents, metadata });
 
   // Validate required fields
   if (!paymentId || !companyId) {
@@ -223,7 +225,7 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     fromMetadata: isStackerFromMetadata,
     fromFirestore: isStackerFromFirestore,
     productId: effectiveProductId,
-    amount,
+    amountCents,
   });
 
   // Use the correct owner ID (from Firestore record if available)
@@ -245,7 +247,7 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
     // Try to get product name from Whop
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const whopProduct = await (whopsdk.products as any).retrieve({ id: effectiveProductId });
+      const whopProduct = await (whopsdk.products as any).retrieve(effectiveProductId);
       productName = whopProduct?.title || "Product";
     } catch (err) {
       console.log("Could not fetch product name from Whop:", err);
@@ -253,22 +255,23 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
   }
 
   // Create transaction record for this sale (5% fee applies)
+  // saleAmount is in DOLLARS for display purposes
   const transaction = await createTransaction({
     userId: ownerForTransaction.id,
     whopPaymentId: paymentId,
     productId: effectiveProductId,
     productName,
-    saleAmount: amount / 100, // Convert cents to dollars
+    saleAmount: amountDollars, // Already in dollars from Whop
     currency,
   });
 
-  // Increment total revenue for this user
-  await incrementTotalRevenue(ownerForTransaction.id, amount);
+  // Increment total revenue for this user (expects cents)
+  await incrementTotalRevenue(ownerForTransaction.id, amountCents);
 
-  // Record conversion for analytics
-  await recordUpsellConversion(ownerForTransaction.id, amount);
+  // Record conversion for analytics (expects cents)
+  await recordUpsellConversion(ownerForTransaction.id, amountCents);
 
-  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue:", amount, "cents", "Product:", effectiveProductId, "Source:", saleSource);
+  console.log("Transaction recorded:", transaction.id, "Fee:", transaction.feeAmount, "Revenue:", amountCents, "cents", "Product:", effectiveProductId, "Source:", saleSource);
 
   // Note: Upsell notifications are handled via membership.activated webhook
   // This ensures a single source of truth for both free and paid products
