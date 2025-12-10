@@ -239,50 +239,6 @@ async function processBilling(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-/**
- * GET endpoint for testing/debugging (returns status without processing)
- */
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Verify auth
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const usersDueForBilling = await getUsersDueForBilling();
-
-    const summary = await Promise.all(
-      usersDueForBilling.map(async (user) => {
-        const pendingTransactions = await getPendingTransactions(user.id);
-        const totalFee = pendingTransactions.reduce(
-          (sum, t) => sum + t.feeAmount,
-          0
-        );
-        return {
-          userId: user.id,
-          paymentMethodConnected: user.paymentMethodConnected,
-          pendingTransactions: pendingTransactions.length,
-          totalFee: Math.round(totalFee * 100) / 100,
-          nextBillingDate: user.nextBillingDate?.toDate().toISOString(),
-        };
-      })
-    );
-
-    return NextResponse.json({
-      usersDueForBilling: summary.length,
-      users: summary,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
-  }
-}
-
 // Helper function to format date range
 function formatDateRange(start: Date, end: Date): string {
   const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
