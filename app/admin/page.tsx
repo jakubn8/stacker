@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 interface AdminUser {
   id: string;
@@ -26,6 +27,7 @@ interface Summary {
   graceCount: number;
   totalOverdue: number;
   totalPending: number;
+  lifetimeRevenueCents: number;
 }
 
 export default function AdminPage() {
@@ -226,6 +228,53 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
+
+        {/* Branded Marketing Card */}
+        {summary && (
+          <div className="mb-6">
+            <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-2xl p-8 shadow-2xl">
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+              <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                {/* Logo */}
+                <div className="flex-shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg ring-1 ring-white/20">
+                    <Image
+                      src="/favicon.ico"
+                      alt="Stacker Logo"
+                      width={56}
+                      height={56}
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 text-center sm:text-left">
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-1">
+                    Stacker
+                  </h2>
+                  <p className="text-purple-200/80 text-sm mb-4">Lifetime Revenue Generated</p>
+
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl sm:text-5xl font-bold text-white">
+                      ${(summary.lifetimeRevenueCents / 100).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+
+                  <p className="text-purple-200/60 text-sm mt-3">
+                    Across {summary.totalUsers} {summary.totalUsers === 1 ? "seller" : "sellers"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         {summary && (

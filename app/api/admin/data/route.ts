@@ -85,8 +85,12 @@ export async function GET(): Promise<NextResponse> {
     let totalOverdue = 0;
     let lockoutCount = 0;
     let graceCount = 0;
+    let lifetimeRevenueCents = 0;
 
     for (const user of users) {
+      // Sum up lifetime revenue from all users
+      lifetimeRevenueCents += user.totalRevenueGeneratedCents || 0;
+
       // Get pending transactions for this user
       const pendingTransactions = await getPendingTransactions(user.id);
       const pendingAmount = pendingTransactions.reduce(
@@ -205,6 +209,7 @@ export async function GET(): Promise<NextResponse> {
         graceCount,
         totalOverdue: Math.round(totalOverdue * 100) / 100,
         totalPending: Math.round(totalPending * 100) / 100,
+        lifetimeRevenueCents,
       },
     });
   } catch (error) {
