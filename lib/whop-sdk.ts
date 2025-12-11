@@ -74,5 +74,9 @@ export const SKIP_BILLING_CHECK = process.env.SKIP_BILLING_CHECK === "true";
 // Stacker's App ID
 export const STACKER_APP_ID = process.env.WHOP_APP_ID || "";
 
+// Stacker's Fee Product ID (used for billing - references a single reusable product)
+// This prevents creating a new product for every billing charge
+export const STACKER_FEE_PRODUCT_ID = "prod_Py8ESJJ5IPwrT";
+
 // Export for convenience
 export { Whop };

@@ -1244,7 +1244,7 @@ export default function DashboardPage() {
                 {billingStatus.recentTransactions.length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium text-zinc-400 mb-3">Recent Transactions</h3>
-                    <div className="space-y-2">
+                    <div className="max-h-[180px] overflow-y-auto space-y-2">
                       {billingStatus.recentTransactions.map((t) => (
                         <div
                           key={t.id}
@@ -1277,7 +1277,7 @@ export default function DashboardPage() {
                 {billingStatus.recentInvoices.length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium text-zinc-400 mb-3">Past Invoices</h3>
-                    <div className="space-y-2">
+                    <div className="max-h-[180px] overflow-y-auto space-y-2">
                       {billingStatus.recentInvoices.map((i) => (
                         <div
                           key={i.id}

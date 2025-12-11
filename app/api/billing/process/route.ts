@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { whopsdk, STACKER_COMPANY_ID } from "@/lib/whop-sdk";
+import { whopsdk, STACKER_COMPANY_ID, STACKER_FEE_PRODUCT_ID } from "@/lib/whop-sdk";
 import {
   getUsersDueForBilling,
   getPendingTransactions,
@@ -153,11 +153,7 @@ async function processBilling(request: NextRequest): Promise<NextResponse> {
               initial_price: Math.round(totalFee * 100) / 100, // Price in dollars (not cents)
               currency: "usd",
               plan_type: "one_time",
-              product: {
-                title: `Stacker Fee (${formatDateRange(periodStart.toDate(), periodEnd.toDate())})`,
-                // Encode invoice info in external_identifier for webhook lookup
-                external_identifier: `stacker_invoice_${invoice.id}_user_${user.id}`,
-              },
+              product_id: STACKER_FEE_PRODUCT_ID, // Reference existing product (no new product created)
             },
           });
 
@@ -237,12 +233,4 @@ async function processBilling(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
-
-// Helper function to format date range
-function formatDateRange(start: Date, end: Date): string {
-  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const startStr = start.toLocaleDateString("en-US", options);
-  const endStr = end.toLocaleDateString("en-US", options);
-  return `${startStr} - ${endStr}`;
 }
