@@ -57,6 +57,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         const whopUser = await whopsdk.users.retrieve(whopUserId);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userData = whopUser as any;
+        console.log(`Whop user data keys:`, Object.keys(userData));
+        console.log(`Whop user data:`, JSON.stringify(userData, null, 2));
         email = userData.email || null;
         username = userData.username || null;
         console.log(`Fetched user info: email=${email}, username=${username}`);

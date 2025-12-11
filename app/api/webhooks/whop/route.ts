@@ -18,6 +18,8 @@ import {
   getStackerPaymentByWhopId,
   deleteStackerPayment,
   getUser,
+  startGracePeriod,
+  incrementInvoiceRetryCount,
   type FlowId,
 } from "@/lib/db";
 import { Timestamp } from "firebase-admin/firestore";
@@ -277,27 +279,39 @@ async function handlePaymentSucceeded(data: Record<string, unknown>): Promise<vo
 /**
  * Handle failed payments
  * - If it's our Stacker billing charge that failed, mark invoice as failed
+ * - Start grace period for the user (48h to fix payment before lockout)
  */
 async function handlePaymentFailed(data: Record<string, unknown>): Promise<void> {
   const paymentId = data.id as string;
-  const companyId = data.company_id as string;
+  const companyId = data.company_id as string | undefined;
   const failureMessage = (data.failure_message as string) || "Unknown error";
 
   console.log("Payment failed:", { paymentId, companyId, failureMessage });
 
-  // Only handle if this is our Stacker billing charge
-  if (companyId !== STACKER_COMPANY_ID) {
+  // Find the invoice by the stored whopPaymentId
+  // This is more reliable than checking companyId since Whop may not always include it
+  const invoice = await getInvoiceByWhopPaymentId(paymentId);
+
+  if (!invoice) {
+    // Not our billing payment - might be a customer payment that failed
+    console.log("No invoice found for payment:", paymentId);
     return;
   }
 
-  // Find the invoice by the stored whopPaymentId
-  const invoice = await getInvoiceByWhopPaymentId(paymentId);
-
-  if (invoice && invoice.status === "processing") {
+  if (invoice.status === "processing") {
+    // Mark invoice as failed
     await updateInvoiceStatus(invoice.id, "failed", {
       failureReason: failureMessage,
     });
+    await incrementInvoiceRetryCount(invoice.id);
+
+    // Start grace period (48 hours to fix payment before lockout)
+    await startGracePeriod(invoice.userId, invoice.id);
+
     console.log("Invoice marked as failed:", invoice.id, failureMessage);
+    console.log("User", invoice.userId, "entered grace period (48h to fix payment)");
+  } else {
+    console.log("Invoice not in processing state:", invoice.id, "status:", invoice.status);
   }
 }
 
