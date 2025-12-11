@@ -82,6 +82,9 @@ export interface User {
   whopMemberId: string;
   whopUserId: string;
   email: string | null;
+  // User profile info (for admin dashboard)
+  username?: string | null;
+  companyName?: string | null;
   paymentMethodId: string | null;
   paymentMethodConnected: boolean;
   billingStatus: "active" | "grace_period" | "unpaid_lockout";
@@ -573,6 +576,8 @@ export async function createUser(data: {
   whopMemberId?: string; // Optional - will use whopUserId as fallback
   whopUserId: string;
   email: string | null;
+  username?: string | null;
+  companyName?: string | null;
 }): Promise<User> {
   const now = Timestamp.now();
   const userData = {
@@ -580,6 +585,8 @@ export async function createUser(data: {
     whopMemberId: data.whopMemberId || data.whopUserId, // Use userId as fallback
     whopUserId: data.whopUserId,
     email: data.email,
+    username: data.username || null,
+    companyName: data.companyName || null,
     paymentMethodId: null,
     paymentMethodConnected: false,
     billingStatus: "active" as const,
@@ -1628,5 +1635,66 @@ export async function getStackerPaymentByWhopId(whopPaymentId: string): Promise<
 export async function deleteStackerPayment(id: string): Promise<void> {
   await db.collection("stackerPayments").doc(id).delete();
   console.log("Stacker payment record deleted:", id);
+}
+
+// ============================================
+// ADMIN DASHBOARD FUNCTIONS
+// ============================================
+
+/**
+ * Get all users for admin dashboard
+ */
+export async function getAllUsers(): Promise<User[]> {
+  const snapshot = await db.collection("users").get();
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+}
+
+/**
+ * Update user profile info (username, companyName)
+ * Used for backfilling from Whop API
+ */
+export async function updateUserProfile(
+  userId: string,
+  data: {
+    username?: string | null;
+    companyName?: string | null;
+    email?: string | null;
+  }
+): Promise<void> {
+  const updateData: Record<string, unknown> = {
+    updatedAt: Timestamp.now(),
+  };
+
+  if (data.username !== undefined) {
+    updateData.username = data.username;
+  }
+  if (data.companyName !== undefined) {
+    updateData.companyName = data.companyName;
+  }
+  if (data.email !== undefined) {
+    updateData.email = data.email;
+  }
+
+  await db.collection("users").doc(userId).update(updateData);
+}
+
+/**
+ * Get the last paid invoice for a user
+ */
+export async function getLastPaidInvoice(userId: string): Promise<Invoice | null> {
+  const snapshot = await db
+    .collection("invoices")
+    .where("userId", "==", userId)
+    .where("status", "==", "paid")
+    .orderBy("paidAt", "desc")
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() } as Invoice;
 }
 

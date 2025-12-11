@@ -12,6 +12,7 @@ import {
   type FlowId,
 } from "@/lib/db";
 import { verifyAuthFromRequest } from "@/lib/auth";
+import { whopsdk } from "@/lib/whop-sdk";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,41 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Auto-create user if not found
     if (!user && companyId) {
       console.log(`Auto-creating user: ${whopUserId} for company: ${companyId}`);
+
+      // Fetch user and company info from Whop API for admin dashboard
+      let email: string | null = null;
+      let username: string | null = null;
+      let companyName: string | null = null;
+
+      try {
+        // Fetch user info
+        const whopUser = await whopsdk.users.retrieve(whopUserId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userData = whopUser as any;
+        email = userData.email || null;
+        username = userData.username || null;
+        console.log(`Fetched user info: email=${email}, username=${username}`);
+      } catch (err) {
+        console.log("Could not fetch user info from Whop:", err);
+      }
+
+      try {
+        // Fetch company info
+        const whopCompany = await whopsdk.companies.retrieve(companyId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const companyData = whopCompany as any;
+        companyName = companyData.title || companyData.name || null;
+        console.log(`Fetched company info: name=${companyName}`);
+      } catch (err) {
+        console.log("Could not fetch company info from Whop:", err);
+      }
+
       user = await createUser({
         whopUserId,
         whopCompanyId: companyId,
-        email: null,
+        email,
+        username,
+        companyName,
       });
     }
 
