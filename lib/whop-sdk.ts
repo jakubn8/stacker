@@ -65,8 +65,7 @@ export const whopsdk = {
 
 // Stacker's billing company ID (where Stacker receives 5% fee payments from sellers)
 // This must be DIFFERENT from any seller's company ID
-// TODO: Remove "_TESTING" suffix when app goes live
-export const STACKER_COMPANY_ID = process.env.WHOP_COMPANY_ID ? `${process.env.WHOP_COMPANY_ID}_TESTING` : "";
+export const STACKER_COMPANY_ID = process.env.WHOP_COMPANY_ID || "";
 
 // For testing: Set SKIP_BILLING_CHECK=true to bypass the billing payment detection
 // This allows testing upsell tracking with the same company ID
