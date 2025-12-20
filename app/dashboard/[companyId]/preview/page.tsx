@@ -71,9 +71,18 @@ export default function StorefrontEditorPage() {
     try {
       setLoading(true);
 
-      // Fetch products and settings in parallel
+      // First, fetch flow settings to get experienceId (needed for product filtering)
+      const flowRes = await fetch(`/api/flow/settings?whopUserId=${whopUserId}&companyId=${companyId}`);
+      let experienceId = "";
+      if (flowRes.ok) {
+        const flowData = await flowRes.json();
+        experienceId = flowData.experienceId || "";
+      }
+
+      // Fetch products and storefront settings in parallel
+      const productsUrl = `/api/products?companyId=${companyId}&filterHidden=true${experienceId ? `&experienceId=${experienceId}` : ""}`;
       const [productsRes, settingsRes] = await Promise.all([
-        fetch(`/api/products?companyId=${companyId}&filterHidden=true`),
+        fetch(productsUrl),
         fetch(`/api/storefront/settings?whopUserId=${whopUserId}&companyId=${companyId}`),
       ]);
 

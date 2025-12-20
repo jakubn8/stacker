@@ -1731,16 +1731,7 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-blue-300 text-xs">
-                  To add or remove products, go to{" "}
-                  <a
-                    href="https://whop.com/hub/settings/apps"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-blue-200"
-                  >
-                    Whop Settings → Apps → Stacker → App access
-                  </a>
-                  , then click &quot;Sync from Whop&quot; to refresh.
+                  To add or remove products, go to Dashboard → Products → select the product you want to add → scroll down to &quot;Included apps&quot; → enable &quot;Stacker&quot;. Then click &quot;Sync from Whop&quot; to refresh.
                 </p>
               </div>
             </div>
@@ -1803,11 +1794,6 @@ export default function DashboardPage() {
                     // Use local state for newly uploaded images, fall back to API's resolved image
                     const displayImageUrl = productImages[product.id] || product.imageUrl;
                     const isUploading = uploadingProductId === product.id;
-                    // Check if using Whop's image vs custom override
-                    // Custom override: either from local state (just uploaded) or from API (previously saved)
-                    const hasCustomOverride = !!productImages[product.id] || !!product.customImageUrl;
-                    // Using Whop image: has Whop image AND no custom override
-                    const isUsingWhopImage = !!product.whopImageUrl && !hasCustomOverride;
 
                     return (
                     <tr
@@ -1829,19 +1815,11 @@ export default function DashboardPage() {
                                   alt={product.title}
                                   className="h-9 w-16 rounded-lg object-cover"
                                 />
-                                {/* Image source indicator */}
-                                {isUsingWhopImage && (
-                                  <div className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 rounded-full flex items-center justify-center" title="Image from Whop">
-                                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                                {/* Edit overlay - only show for custom override option */}
+                                {/* Edit overlay */}
                                 <button
                                   onClick={() => handleImageUploadClick(product.id)}
                                   className="absolute inset-0 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-                                  title={hasCustomOverride ? "Change custom image" : "Override with custom image"}
+                                  title="Change image"
                                 >
                                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1866,13 +1844,7 @@ export default function DashboardPage() {
                               <p className="product-desc text-gray-500 dark:text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
                             )}
                             {!displayImageUrl && (
-                              <p className="text-orange-400 text-xs mt-0.5">No image - add on Whop or upload here</p>
-                            )}
-                            {isUsingWhopImage && (
-                              <p className="text-blue-400 text-xs mt-0.5">Using Whop image</p>
-                            )}
-                            {hasCustomOverride && displayImageUrl && (
-                              <p className="text-purple-400 text-xs mt-0.5">Custom override</p>
+                              <p className="text-orange-400 text-xs mt-0.5">No image</p>
                             )}
                           </div>
                         </div>
