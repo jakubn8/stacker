@@ -11,9 +11,9 @@ export interface WhopProduct {
   description: string | null;
   headline: string | null;
   route: string;
-  imageUrl: string | null; // The resolved image URL (Whop first, then custom)
-  whopImageUrl: string | null; // Original image from Whop API
-  customImageUrl: string | null; // Custom override image uploaded by creator
+  // Product image uploaded by creator in Stacker (stored in Firebase)
+  // Note: Whop API does not expose product images through the products endpoint
+  imageUrl: string | null;
   // Pricing from the first/primary plan
   price: number;
   currency: string;
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       }
 
-      // Fetch full product details (including images) in parallel
+      // Fetch full product details in parallel
       const fullProducts = await Promise.all(
         productIds.map(async (productId) => {
           try {
@@ -226,20 +226,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           ? `https://whop.com/checkout/${planId}?d2c=true`
           : null;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const productAny = product as any;
-
-        // Image priority:
-        // 1. Custom override (if explicitly set by creator) - takes highest priority
-        // 2. Whop API images (pulled automatically from Whop)
-        // 3. null if neither exists
-        // This allows creators to override Whop images when needed
-        const whopImageUrl = productAny.images?.[0]?.source_url || null;
+        // NOTE: The Whop API does NOT return product images through the products endpoint.
+        // The SDK's Product type doesn't include an images field, and this is confirmed
+        // by the official API documentation. Product images in Whop are managed separately
+        // and not exposed via the public API.
+        //
+        // As a result, product images must be uploaded by creators directly in Stacker,
+        // which stores them in Firebase (productImages field on the user document).
         const customImageUrl = productImages[product.id] || null;
-
-        // If creator has set a custom image, use it (override)
-        // Otherwise, use Whop's image (default behavior)
-        const imageUrl = customImageUrl || whopImageUrl;
+        const imageUrl = customImageUrl;
 
         products.push({
           id: product.id,
@@ -248,8 +243,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           headline: product.headline,
           route: product.route,
           imageUrl,
-          whopImageUrl,
-          customImageUrl,
           price,
           currency,
           planType,

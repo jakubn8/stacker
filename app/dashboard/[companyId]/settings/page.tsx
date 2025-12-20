@@ -96,9 +96,9 @@ interface WhopProduct {
   description: string | null;
   headline: string | null;
   route: string;
-  imageUrl: string | null; // Resolved image (Whop first, then custom override)
-  whopImageUrl: string | null; // Original image from Whop API
-  customImageUrl: string | null; // Custom override uploaded by creator
+  // Product image uploaded by creator in Stacker (stored in Firebase)
+  // Note: Whop API does not expose product images through the products endpoint
+  imageUrl: string | null;
   price: number;
   currency: string;
   planType: "one_time" | "renewal" | "free";
@@ -1830,7 +1830,7 @@ export default function DashboardPage() {
                               <button
                                 onClick={() => handleImageUploadClick(product.id)}
                                 className="h-9 w-16 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center hover:bg-orange-500/30 transition-colors cursor-pointer group/upload"
-                                title="Upload image (product has no image on Whop)"
+                                title="Upload product image"
                               >
                                 <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1844,7 +1844,7 @@ export default function DashboardPage() {
                               <p className="product-desc text-gray-500 dark:text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
                             )}
                             {!displayImageUrl && (
-                              <p className="text-orange-400 text-xs mt-0.5">No image</p>
+                              <p className="text-orange-400 text-xs mt-0.5">No image - click to upload</p>
                             )}
                           </div>
                         </div>
