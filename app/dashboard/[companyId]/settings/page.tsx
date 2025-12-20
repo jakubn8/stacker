@@ -96,7 +96,9 @@ interface WhopProduct {
   description: string | null;
   headline: string | null;
   route: string;
-  imageUrl: string | null;
+  imageUrl: string | null; // Resolved image (Whop first, then custom override)
+  whopImageUrl: string | null; // Original image from Whop API
+  customImageUrl: string | null; // Custom override uploaded by creator
   price: number;
   currency: string;
   planType: "one_time" | "renewal" | "free";
@@ -173,6 +175,9 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<WhopProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+
+  // Experience ID for filtering products (from "App access" settings)
+  const [experienceId, setExperienceId] = useState<string | null>(null);
 
   // Billing state
   const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
@@ -261,7 +266,7 @@ export default function DashboardPage() {
   // Fetch products from Whop - prioritize URL param if it's a valid biz_xxx ID
   const realCompanyId = companyId.startsWith("biz_") ? companyId : (authUser?.whopCompanyId?.startsWith("biz_") ? authUser.whopCompanyId : null);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (expId?: string | null) => {
     if (!realCompanyId) {
       setProductsError("Unable to determine company ID. Please try refreshing.");
       setProductsLoading(false);
@@ -271,7 +276,13 @@ export default function DashboardPage() {
     try {
       setProductsLoading(true);
       setProductsError(null);
-      const response = await fetch(`/api/products?companyId=${realCompanyId}`);
+      // Use experienceId to filter products by "App access" settings
+      const effectiveExperienceId = expId || experienceId;
+      let url = `/api/products?companyId=${realCompanyId}`;
+      if (effectiveExperienceId) {
+        url += `&experienceId=${effectiveExperienceId}`;
+      }
+      const response = await fetch(url);
 
       if (response.ok) {
         const data = await response.json();
@@ -288,11 +299,9 @@ export default function DashboardPage() {
     } finally {
       setProductsLoading(false);
     }
-  }, [realCompanyId]);
+  }, [realCompanyId, experienceId]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // Products are fetched after flow config loads (to get experienceId)
 
   // Fetch flow config
   // Helper to convert API flow to local FlowState
@@ -349,13 +358,25 @@ export default function DashboardPage() {
         if (data.productImages) {
           setProductImages(data.productImages);
         }
+        // Save experienceId for product filtering (from "App access" settings)
+        if (data.experienceId) {
+          setExperienceId(data.experienceId);
+        }
+        // Fetch products now that we have the experienceId
+        // Pass it directly since state may not be updated yet
+        fetchProducts(data.experienceId || null);
+      } else {
+        // If flow config fails, still try to fetch products (will use fallback filtering)
+        fetchProducts(null);
       }
     } catch (error) {
       console.error("Failed to fetch flow config:", error);
+      // Still try to fetch products on error
+      fetchProducts(null);
     } finally {
       setFlowConfigLoading(false);
     }
-  }, [whopUserId, companyId, realCompanyId]);
+  }, [whopUserId, companyId, realCompanyId, fetchProducts]);
 
   useEffect(() => {
     fetchFlowConfig();
@@ -695,7 +716,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950">
       <style jsx>{`
         @media (max-width: 640px) {
           .stats-card {
@@ -841,11 +862,11 @@ export default function DashboardPage() {
             onClick={() => setShowPaymentRequiredModal(false)}
           />
           {/* Modal */}
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <div className="relative bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-200 dark:border-zinc-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
             {/* Close button */}
             <button
               onClick={() => setShowPaymentRequiredModal(false)}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-gray-400 dark:text-zinc-500 hover:text-gray-900 dark:text-white transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -860,10 +881,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Content */}
-            <h3 className="text-lg font-semibold text-white text-center mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
               Payment Method Required
             </h3>
-            <p className="text-zinc-400 text-sm text-center mb-6">
+            <p className="text-gray-500 dark:text-zinc-400 text-sm text-center mb-6">
               Please connect a payment method before activating upsells. We only charge 5% on successful upsells.
             </p>
 
@@ -871,7 +892,7 @@ export default function DashboardPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPaymentRequiredModal(false)}
-                className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 font-medium transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-gray-200 dark:hover:bg-zinc-700 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-600 dark:text-zinc-300 font-medium transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -880,7 +901,7 @@ export default function DashboardPage() {
                   setShowPaymentRequiredModal(false);
                   handleConnectPayment();
                 }}
-                className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 rounded-lg text-white font-medium transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 rounded-lg text-gray-900 dark:text-white font-medium transition-colors cursor-pointer"
               >
                 Connect Now
               </button>
@@ -893,9 +914,9 @@ export default function DashboardPage() {
       <div className="p-6 md:p-8">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
-          <div className="border-b border-zinc-800 pb-6">
-            <h1 className="text-3xl font-bold text-white">Dashboard & Analytics</h1>
-            <p className="text-zinc-400 mt-2">
+          <div className="border-b border-gray-200 dark:border-gray-200 dark:border-zinc-800 pb-6">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard & Analytics</h1>
+            <p className="text-gray-500 dark:text-zinc-400 mt-2">
               Configure your post-purchase upsells and view performance metrics
             </p>
           </div>
@@ -903,10 +924,10 @@ export default function DashboardPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 gap-4">
           {/* Total Revenue Card */}
-          <div className="stats-card bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="stats-card bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-200 dark:border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="stats-card-title text-zinc-400 text-sm font-medium">Total Revenue Generated</p>
+                <p className="stats-card-title text-gray-500 dark:text-zinc-400 text-sm font-medium">Total Revenue Generated</p>
                 <p className="stats-card-number text-4xl font-bold text-green-500 mt-2">
                   ${billingStatus?.billing?.totalRevenueGeneratedCents
                     ? (billingStatus.billing.totalRevenueGeneratedCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -932,11 +953,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Conversion Rate Card */}
-          <div className="stats-card bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="stats-card bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-200 dark:border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="stats-card-title text-zinc-400 text-sm font-medium">Conversion Rate</p>
-                <p className="stats-card-number text-4xl font-bold text-white mt-2">{analytics.conversionRate}%</p>
+                <p className="stats-card-title text-gray-500 dark:text-zinc-400 text-sm font-medium">Conversion Rate</p>
+                <p className="stats-card-number text-4xl font-bold text-gray-900 dark:text-white mt-2">{analytics.conversionRate}%</p>
               </div>
               <div className="stats-card-icon h-12 w-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
                 <svg
@@ -963,13 +984,13 @@ export default function DashboardPage() {
             ? "border-red-500/50"
             : billingStatus?.billing?.status === "grace_period"
             ? "border-orange-500/50"
-            : "border-zinc-800"
+            : "border-gray-200 dark:border-zinc-800"
         }`}>
-          <div className="p-6 border-b border-zinc-800">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-200 dark:border-zinc-800">
             <div className="billing-header flex items-center justify-between">
               <div className="billing-header-left">
-                <h2 className="text-xl font-semibold text-white">Stacker Billing</h2>
-                <p className="text-zinc-400 text-sm mt-1">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Stacker Billing</h2>
+                <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1">
                   We charge 5% on successful upsells — we only make money when you do
                 </p>
               </div>
@@ -1007,7 +1028,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-base font-semibold text-orange-400 mb-1">Payment Failed - Action Required</h3>
-                  <p className="text-zinc-400 text-sm mb-3">
+                  <p className="text-gray-500 dark:text-zinc-400 text-sm mb-3">
                     Your last payment attempt failed. Please update your payment method or retry within{" "}
                     <span className="font-bold text-orange-400">
                       {billingStatus.gracePeriod.hoursRemaining > 1
@@ -1022,7 +1043,7 @@ export default function DashboardPage() {
                     <button
                       onClick={handleRetryPayment}
                       disabled={retryingPayment}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 rounded-lg text-gray-900 dark:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       {retryingPayment ? (
                         <>
@@ -1041,7 +1062,7 @@ export default function DashboardPage() {
                     <button
                       onClick={handleUpdatePaymentMethod}
                       disabled={connectingPayment}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 rounded-lg text-gray-900 dark:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       {connectingPayment ? (
                         <>
@@ -1074,7 +1095,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-base font-semibold text-red-400 mb-1">Account Locked - Upsells Disabled</h3>
-                  <p className="text-zinc-400 text-sm mb-3">
+                  <p className="text-gray-500 dark:text-zinc-400 text-sm mb-3">
                     Your account has been locked due to an unpaid balance. Your upsell flow is currently disabled.
                     Please pay your outstanding balance to restore access.
                   </p>
@@ -1082,7 +1103,7 @@ export default function DashboardPage() {
                     <button
                       onClick={handleRetryPayment}
                       disabled={retryingPayment}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 rounded-lg text-gray-900 dark:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       {retryingPayment ? (
                         <>
@@ -1101,7 +1122,7 @@ export default function DashboardPage() {
                     <button
                       onClick={handleUpdatePaymentMethod}
                       disabled={connectingPayment}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 rounded-lg text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 rounded-lg text-gray-900 dark:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       {connectingPayment ? (
                         <>
@@ -1141,7 +1162,7 @@ export default function DashboardPage() {
           <div className="p-6">
             {billingLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="h-8 w-8 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
+                <div className="h-8 w-8 border-2 border-gray-300 dark:border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
               </div>
             ) : !billingStatus?.user?.paymentMethodConnected ? (
               /* No Payment Method Connected - Show Banner */
@@ -1153,15 +1174,15 @@ export default function DashboardPage() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">Connect a payment method to activate upsells</h3>
-                    <p className="text-zinc-400 text-sm mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Connect a payment method to activate upsells</h3>
+                    <p className="text-gray-500 dark:text-zinc-400 text-sm mb-4">
                       Stacker is free to use. We only charge 5% on successful upsells made through our app.
                       Billing happens automatically every 7 days.
                     </p>
                     <button
                       onClick={handleConnectPayment}
                       disabled={connectingPayment}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 rounded-lg text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 rounded-lg text-gray-900 dark:text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       {connectingPayment ? (
                         <>
@@ -1191,29 +1212,29 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 {/* Billing Stats */}
                 <div className="billing-stats-grid grid grid-cols-4 gap-4">
-                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Current Bill</p>
-                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">
+                  <div className="billing-stat-card bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-xl p-4">
+                    <p className="text-gray-500 dark:text-zinc-400 text-sm">Current Bill</p>
+                    <p className="billing-stat-value text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       ${billingStatus.billing.pendingFee.toFixed(2)}
                     </p>
                   </div>
-                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Next Payment</p>
-                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">
+                  <div className="billing-stat-card bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-xl p-4">
+                    <p className="text-gray-500 dark:text-zinc-400 text-sm">Next Payment</p>
+                    <p className="billing-stat-value text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {billingStatus.billing.daysTillBilling > 0
                         ? `in ${billingStatus.billing.daysTillBilling} days`
                         : "Today"}
                     </p>
                   </div>
-                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">This Period</p>
-                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">
+                  <div className="billing-stat-card bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-xl p-4">
+                    <p className="text-gray-500 dark:text-zinc-400 text-sm">This Period</p>
+                    <p className="billing-stat-value text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {billingStatus.billing.pendingTransactionCount} upsells
                     </p>
                   </div>
-                  <div className="billing-stat-card bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                    <p className="text-zinc-400 text-sm">Billing Cycle</p>
-                    <p className="billing-stat-value text-2xl font-bold text-white mt-1">Weekly</p>
+                  <div className="billing-stat-card bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-xl p-4">
+                    <p className="text-gray-500 dark:text-zinc-400 text-sm">Billing Cycle</p>
+                    <p className="billing-stat-value text-2xl font-bold text-gray-900 dark:text-white mt-1">Weekly</p>
                   </div>
                 </div>
 
@@ -1222,7 +1243,7 @@ export default function DashboardPage() {
                   <button
                     onClick={handleUpdatePaymentMethod}
                     disabled={connectingPayment}
-                    className="billing-actions-btn inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    className="billing-actions-btn inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-gray-200 dark:hover:bg-zinc-700 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:text-white font-medium text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
                   >
                     {connectingPayment ? (
                       <>
@@ -1243,12 +1264,12 @@ export default function DashboardPage() {
                 {/* Recent Transactions */}
                 {billingStatus.recentTransactions.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-zinc-400 mb-3">Recent Transactions</h3>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-zinc-400 mb-3">Recent Transactions</h3>
                     <div className="max-h-[180px] overflow-y-auto space-y-2">
                       {billingStatus.recentTransactions.map((t) => (
                         <div
                           key={t.id}
-                          className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-gray-100 dark:bg-zinc-800/30 border border-gray-200 dark:border-zinc-800 rounded-lg"
                         >
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 bg-green-500/10 rounded-lg flex items-center justify-center">
@@ -1257,14 +1278,14 @@ export default function DashboardPage() {
                               </svg>
                             </div>
                             <div>
-                              <p className="text-white text-sm font-medium">{t.productName}</p>
-                              <p className="text-zinc-500 text-xs">
+                              <p className="text-gray-900 dark:text-white text-sm font-medium">{t.productName}</p>
+                              <p className="text-gray-400 dark:text-zinc-500 text-xs">
                                 {new Date(t.createdAt).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-white text-sm">${t.saleAmount.toFixed(2)} sale</p>
+                            <p className="text-gray-900 dark:text-white text-sm">${t.saleAmount.toFixed(2)} sale</p>
                             <p className="text-green-400 text-xs">${t.feeAmount.toFixed(2)} fee</p>
                           </div>
                         </div>
@@ -1276,12 +1297,12 @@ export default function DashboardPage() {
                 {/* Recent Invoices */}
                 {billingStatus.recentInvoices.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-zinc-400 mb-3">Past Invoices</h3>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-zinc-400 mb-3">Past Invoices</h3>
                     <div className="max-h-[180px] overflow-y-auto space-y-2">
                       {billingStatus.recentInvoices.map((i) => (
                         <div
                           key={i.id}
-                          className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-gray-100 dark:bg-zinc-800/30 border border-gray-200 dark:border-zinc-800 rounded-lg"
                         >
                           <div className="flex items-center gap-3">
                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
@@ -1298,13 +1319,13 @@ export default function DashboardPage() {
                               )}
                             </div>
                             <div>
-                              <p className="text-white text-sm font-medium">
+                              <p className="text-gray-900 dark:text-white text-sm font-medium">
                                 {new Date(i.periodStart).toLocaleDateString()} - {new Date(i.periodEnd).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <p className="text-white text-sm">${i.totalFee.toFixed(2)}</p>
+                            <p className="text-gray-900 dark:text-white text-sm">${i.totalFee.toFixed(2)}</p>
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                               i.status === "paid"
                                 ? "bg-green-500/20 text-green-400"
@@ -1322,13 +1343,13 @@ export default function DashboardPage() {
                 {/* Empty State */}
                 {billingStatus.recentTransactions.length === 0 && billingStatus.recentInvoices.length === 0 && (
                   <div className="text-center py-8">
-                    <div className="h-12 w-12 bg-zinc-800 rounded-full mx-auto flex items-center justify-center mb-3">
-                      <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="h-12 w-12 bg-gray-100 dark:bg-zinc-800 rounded-full mx-auto flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-gray-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                     </div>
-                    <p className="text-zinc-400 text-sm">No transactions yet</p>
-                    <p className="text-zinc-500 text-xs mt-1">Transactions will appear here when upsells are made</p>
+                    <p className="text-gray-500 dark:text-zinc-400 text-sm">No transactions yet</p>
+                    <p className="text-gray-400 dark:text-zinc-500 text-xs mt-1">Transactions will appear here when upsells are made</p>
                   </div>
                 )}
               </div>
@@ -1341,15 +1362,15 @@ export default function DashboardPage() {
           {/* Section Header */}
           <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
             <div>
-              <h2 className="text-xl font-semibold text-white">Upsell Flows</h2>
-              <p className="text-zinc-400 text-sm mt-1">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Upsell Flows</h2>
+              <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1">
                 Create up to 3 upsell flows for different products
               </p>
             </div>
             <Link
               href={`/dashboard/${companyId}/editor`}
               onClick={handleEditorClick}
-              className="hidden sm:inline-flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+              className="hidden sm:inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-gray-200 dark:hover:bg-zinc-700 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:text-white text-sm font-medium transition-colors cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1362,7 +1383,7 @@ export default function DashboardPage() {
           <Link
             href={`/dashboard/${companyId}/editor`}
             onClick={handleEditorClick}
-            className="flex sm:hidden items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer w-full"
+            className="flex sm:hidden items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-gray-200 dark:hover:bg-zinc-700 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:text-white text-sm font-medium transition-colors cursor-pointer w-full"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1372,9 +1393,9 @@ export default function DashboardPage() {
 
           {/* Editor Mobile Message */}
           {showEditorMobileMessage && (
-            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-6 py-4 shadow-xl max-w-[300px] text-center">
-              <p className="text-white text-sm font-medium mb-1">Desktop Required</p>
-              <p className="text-zinc-400 text-xs">The editor is only available on desktop devices.</p>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg px-6 py-4 shadow-xl max-w-[300px] text-center">
+              <p className="text-gray-900 dark:text-white text-sm font-medium mb-1">Desktop Required</p>
+              <p className="text-gray-500 dark:text-zinc-400 text-xs">The editor is only available on desktop devices.</p>
             </div>
           )}
 
@@ -1388,27 +1409,27 @@ export default function DashboardPage() {
               <div
                 key={flowId}
                 className={`bg-zinc-900 border rounded-xl overflow-hidden transition-colors ${
-                  flow.isActive ? "border-green-500/30" : "border-zinc-800"
+                  flow.isActive ? "border-green-500/30" : "border-gray-200 dark:border-zinc-800"
                 }`}
               >
                 {/* Accordion Header */}
                 <button
                   onClick={() => toggleFlowExpanded(flowId)}
-                  className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                  className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 hover:bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center ${
-                      flow.isActive ? "bg-green-500/20" : "bg-zinc-800"
+                      flow.isActive ? "bg-green-500/20" : "bg-gray-100 dark:bg-zinc-800"
                     }`}>
                       <span className={`text-sm sm:text-base font-bold ${
-                        flow.isActive ? "text-green-400" : "text-zinc-500"
+                        flow.isActive ? "text-green-400" : "text-gray-400 dark:text-zinc-500"
                       }`}>
                         {flowId.replace("flow", "")}
                       </span>
                     </div>
                     <div className="text-left min-w-0">
-                      <h3 className="text-white font-medium text-sm sm:text-base truncate">{flowNames[flowId]}</h3>
-                      <p className="text-zinc-500 text-xs sm:text-sm truncate">
+                      <h3 className="text-gray-900 dark:text-white font-medium text-sm sm:text-base truncate">{flowNames[flowId]}</h3>
+                      <p className="text-gray-400 dark:text-zinc-500 text-xs sm:text-sm truncate">
                         {flow.triggerProductId
                           ? products.find(p => p.id === flow.triggerProductId)?.title || "Product selected"
                           : "No trigger set"}
@@ -1441,7 +1462,7 @@ export default function DashboardPage() {
                           className={`flex items-center gap-2 ${isToggleDisabled && !flow.isActive ? "opacity-50 cursor-not-allowed" : ""}`}
                           title={isToggleDisabled && !flow.isActive ? (isMissingProducts ? "Select trigger and upsell products first" : billingStatus?.billing?.status === "unpaid_lockout" ? "Pay outstanding balance to enable" : "Connect payment method to enable") : undefined}
                         >
-                          <span className="text-xs sm:text-sm font-medium text-zinc-400 hidden sm:inline">
+                          <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-zinc-400 hidden sm:inline">
                             {flow.isActive ? "Active" : "Inactive"}
                           </span>
                           <div
@@ -1462,7 +1483,7 @@ export default function DashboardPage() {
                     })()}
                     {/* Chevron */}
                     <svg
-                      className={`w-5 h-5 text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      className={`w-5 h-5 text-gray-500 dark:text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1474,9 +1495,9 @@ export default function DashboardPage() {
 
                 {/* Accordion Content */}
                 {isExpanded && (
-                  <div className="border-t border-zinc-800 p-4 sm:p-5 space-y-0">
+                  <div className="border-t border-gray-200 dark:border-zinc-800 p-4 sm:p-5 space-y-0">
                     {/* Step 1: Trigger */}
-                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                    <div className="bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-xl p-4">
                       <div className="step-card-layout flex items-start gap-3 sm:gap-4">
                         <div className="step-card-icon flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                           <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1488,9 +1509,9 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-medium text-purple-400 uppercase tracking-wide">Step 1</span>
                             <span className="text-xs text-zinc-600">•</span>
-                            <span className="text-xs text-zinc-500">The Trigger</span>
+                            <span className="text-xs text-gray-400 dark:text-zinc-500">The Trigger</span>
                           </div>
-                          <label className="text-sm font-medium text-white block mb-2">When this product is purchased...</label>
+                          <label className="text-sm font-medium text-gray-900 dark:text-white block mb-2">When this product is purchased...</label>
                           <Select
                             placeholder="Select trigger product..."
                             value={flow.triggerProductId}
@@ -1498,7 +1519,7 @@ export default function DashboardPage() {
                             size="md"
                             items={productDropdownItems}
                             className="step-card-select cursor-pointer"
-                            contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-purple-500 [&_svg]:hidden"
+                            contentClassName="bg-zinc-900 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-gray-200 dark:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-gray-100 dark:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-gray-100 dark:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-purple-500 [&_svg]:hidden"
                           />
                           <p className="text-xs text-red-400 mt-2">
                             This must match the product users purchase to join your community.
@@ -1513,7 +1534,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Step 2: Upsell */}
-                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                    <div className="bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-xl p-4">
                       <div className="step-card-layout flex items-start gap-3 sm:gap-4">
                         <div className="step-card-icon flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                           <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1524,9 +1545,9 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-medium text-green-400 uppercase tracking-wide">Step 2</span>
                             <span className="text-xs text-zinc-600">•</span>
-                            <span className="text-xs text-zinc-500">Primary Upsell</span>
+                            <span className="text-xs text-gray-400 dark:text-zinc-500">Primary Upsell</span>
                           </div>
-                          <label className="text-sm font-medium text-white block mb-2">Show this product</label>
+                          <label className="text-sm font-medium text-gray-900 dark:text-white block mb-2">Show this product</label>
                           <Select
                             placeholder="Select upsell product..."
                             value={flow.upsellProductId}
@@ -1534,7 +1555,7 @@ export default function DashboardPage() {
                             size="md"
                             items={productDropdownItems}
                             className="step-card-select cursor-pointer"
-                            contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-green-500 [&_svg]:hidden"
+                            contentClassName="bg-zinc-900 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-gray-200 dark:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-gray-100 dark:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-gray-100 dark:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-green-500 [&_svg]:hidden"
                           />
                         </div>
                       </div>
@@ -1545,7 +1566,7 @@ export default function DashboardPage() {
                       <div className="h-6 sm:h-8 w-0.5 bg-zinc-700" />
                       <div className="flex items-center gap-2 -ml-1">
                         <div className="h-0.5 w-3 sm:w-4 bg-zinc-700" />
-                        <span className="text-xs text-orange-400 bg-zinc-800 px-2 py-1 rounded border border-zinc-700">
+                        <span className="text-xs text-orange-400 bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded border border-gray-300 dark:border-gray-300 dark:border-zinc-700">
                           If declined...
                         </span>
                       </div>
@@ -1553,7 +1574,7 @@ export default function DashboardPage() {
 
                     {/* Step 3: Downsell */}
                     {flow.hasDownsell ? (
-                      <div className="bg-zinc-800/50 border border-orange-500/30 rounded-xl p-4">
+                      <div className="bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-orange-500/30 rounded-xl p-4">
                         <div className="step-card-layout flex items-start gap-3 sm:gap-4">
                           <div className="step-card-icon flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1565,18 +1586,18 @@ export default function DashboardPage() {
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-medium text-orange-400 uppercase tracking-wide">Step 3</span>
                                 <span className="text-xs text-zinc-600">•</span>
-                                <span className="text-xs text-zinc-500">Downsell</span>
+                                <span className="text-xs text-gray-400 dark:text-zinc-500">Downsell</span>
                               </div>
                               <button
                                 onClick={() => handleRemoveDownsellForFlow(flowId)}
-                                className="p-1.5 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                               </button>
                             </div>
-                            <label className="text-sm font-medium text-white block mb-2">Show this if they decline</label>
+                            <label className="text-sm font-medium text-gray-900 dark:text-white block mb-2">Show this if they decline</label>
                             <Select
                               placeholder="Select downsell product..."
                               value={flow.downsellProductId}
@@ -1584,7 +1605,7 @@ export default function DashboardPage() {
                               size="md"
                               items={productDropdownItems}
                               className="step-card-select cursor-pointer"
-                              contentClassName="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-orange-500 [&_svg]:hidden"
+                              contentClassName="bg-zinc-900 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 shadow-2xl rounded-lg overflow-hidden [&_[role=option]]:px-4 [&_[role=option]]:py-3 [&_[role=option]]:border-b [&_[role=option]]:border-gray-200 dark:border-zinc-800 [&_[role=option]:last-child]:border-b-0 [&_[role=option]]:cursor-pointer [&_[role=option]:hover]:bg-gray-100 dark:bg-zinc-800 [&_[role=option][data-state=checked]]:bg-gray-100 dark:bg-zinc-800 [&_[role=option][data-state=checked]]:border-l-2 [&_[role=option][data-state=checked]]:border-l-orange-500 [&_svg]:hidden"
                             />
                           </div>
                         </div>
@@ -1592,9 +1613,9 @@ export default function DashboardPage() {
                     ) : (
                       <button
                         onClick={() => handleAddDownsell(flowId)}
-                        className="w-full border-2 border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl p-4 flex items-center justify-center gap-2 text-zinc-400 hover:text-zinc-300 transition-colors group cursor-pointer"
+                        className="w-full border-2 border-dashed border-gray-300 dark:border-zinc-700 hover:border-zinc-600 rounded-xl p-4 flex items-center justify-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-gray-600 dark:text-zinc-300 transition-colors group cursor-pointer"
                       >
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 group-hover:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-zinc-500 group-hover:text-gray-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                         <span className="text-sm font-medium">Add Downsell Offer</span>
@@ -1602,7 +1623,7 @@ export default function DashboardPage() {
                     )}
 
                     {/* Notification Settings for this flow */}
-                    <div className="mt-6 pt-6 border-t border-zinc-700">
+                    <div className="mt-6 pt-6 border-t border-gray-300 dark:border-zinc-700">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                           <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1610,39 +1631,39 @@ export default function DashboardPage() {
                           </svg>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-white">Push Notification</h4>
-                          <p className="text-xs text-zinc-500">Sent to buyer when this flow triggers</p>
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-white">Push Notification</h4>
+                          <p className="text-xs text-gray-400 dark:text-zinc-500">Sent to buyer when this flow triggers</p>
                         </div>
                       </div>
 
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Title</label>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5">Title</label>
                           <input
                             type="text"
                             value={flow.notificationTitle}
                             onChange={(e) => handleNotificationTitleChange(flowId, e.target.value)}
                             placeholder="Notification title..."
                             maxLength={50}
-                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Message</label>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5">Message</label>
                           <textarea
                             value={flow.notificationContent}
                             onChange={(e) => handleNotificationContentChange(flowId, e.target.value)}
                             placeholder="Notification message..."
                             maxLength={100}
                             rows={2}
-                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                           />
                         </div>
                       </div>
                     </div>
 
                     {/* Save Button Section */}
-                    <div className="mt-6 pt-4 border-t border-zinc-700 flex items-center justify-between">
+                    <div className="mt-6 pt-4 border-t border-gray-300 dark:border-zinc-700 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {hasUnsavedChanges(flowId) && (
                           <span className="inline-flex items-center gap-1.5 text-amber-400 text-sm">
@@ -1656,8 +1677,8 @@ export default function DashboardPage() {
                         disabled={isSaving || !hasUnsavedChanges(flowId)}
                         className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed ${
                           hasUnsavedChanges(flowId)
-                            ? "bg-green-600 hover:bg-green-500 text-white"
-                            : "bg-zinc-800 text-zinc-500 border border-zinc-700"
+                            ? "bg-green-600 hover:bg-green-500 text-gray-900 dark:text-white"
+                            : "bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 border border-gray-300 dark:border-gray-300 dark:border-zinc-700"
                         } disabled:opacity-50`}
                       >
                         {isSaving ? (
@@ -1683,19 +1704,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Your Products */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="p-6 border-b border-zinc-800">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-200 dark:border-zinc-800">
             <div className="products-header flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold text-white">Your Products</h2>
-                <p className="text-zinc-400 text-sm mt-1">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your Products</h2>
+                <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1">
                   Manage which products are displayed in your store and available for upsells
                 </p>
               </div>
               <button
-                onClick={fetchProducts}
+                onClick={() => fetchProducts()}
                 disabled={productsLoading}
-                className="products-sync-btn inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white text-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="products-sync-btn inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-gray-200 dark:hover:bg-zinc-700 border border-gray-300 dark:border-gray-300 dark:border-zinc-700 rounded-lg text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:text-white text-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 <svg className={`w-4 h-4 ${productsLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1703,11 +1724,31 @@ export default function DashboardPage() {
                 Sync from Whop
               </button>
             </div>
+            {/* Info box about adding products */}
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-blue-300 text-xs">
+                  To add or remove products, go to{" "}
+                  <a
+                    href="https://whop.com/hub/settings/apps"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-blue-200"
+                  >
+                    Whop Settings → Apps → Stacker → App access
+                  </a>
+                  , then click &quot;Sync from Whop&quot; to refresh.
+                </p>
+              </div>
+            </div>
           </div>
 
           {productsLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
+              <div className="h-8 w-8 border-2 border-gray-300 dark:border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
             </div>
           ) : productsError ? (
             <div className="p-6 text-center">
@@ -1718,40 +1759,40 @@ export default function DashboardPage() {
               </div>
               <p className="text-red-400 text-sm mb-2">{productsError}</p>
               <button
-                onClick={fetchProducts}
-                className="text-zinc-400 hover:text-white text-sm underline cursor-pointer"
+                onClick={() => fetchProducts()}
+                className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:text-white text-sm underline cursor-pointer"
               >
                 Try again
               </button>
             </div>
           ) : products.length === 0 ? (
             <div className="p-6 text-center">
-              <div className="h-12 w-12 bg-zinc-800 rounded-full mx-auto flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="h-12 w-12 bg-gray-100 dark:bg-zinc-800 rounded-full mx-auto flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-gray-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <p className="text-zinc-400 text-sm">No products found</p>
-              <p className="text-zinc-500 text-xs mt-1">Create products in your Whop dashboard first</p>
+              <p className="text-gray-500 dark:text-zinc-400 text-sm">No products found</p>
+              <p className="text-gray-400 dark:text-zinc-500 text-xs mt-1">Create products in your Whop dashboard first</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="products-table w-full">
                 <thead className="bg-zinc-900/50">
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
+                  <tr className="border-b border-gray-200 dark:border-gray-200 dark:border-zinc-800">
+                    <th className="text-left text-sm font-medium text-gray-500 dark:text-zinc-400 px-6 py-4">
                       Product
                     </th>
-                    <th className="text-left text-sm font-medium text-zinc-400 px-6 py-4">
+                    <th className="text-left text-sm font-medium text-gray-500 dark:text-zinc-400 px-6 py-4">
                       Price
                     </th>
-                    <th className=" text-left text-sm font-medium text-zinc-400 px-6 py-4">
+                    <th className=" text-left text-sm font-medium text-gray-500 dark:text-zinc-400 px-6 py-4">
                       Type
                     </th>
-                    <th className=" text-left text-sm font-medium text-zinc-400 px-6 py-4">
+                    <th className=" text-left text-sm font-medium text-gray-500 dark:text-zinc-400 px-6 py-4">
                       Status
                     </th>
-                    <th className="text-center text-sm font-medium text-zinc-400 px-6 py-4">
+                    <th className="text-center text-sm font-medium text-gray-500 dark:text-zinc-400 px-6 py-4">
                       Actions
                     </th>
                   </tr>
@@ -1759,34 +1800,48 @@ export default function DashboardPage() {
                 <tbody>
                   {/* Visible Products */}
                   {visibleProducts.map((product) => {
-                    const imageUrl = productImages[product.id] || product.imageUrl;
+                    // Use local state for newly uploaded images, fall back to API's resolved image
+                    const displayImageUrl = productImages[product.id] || product.imageUrl;
                     const isUploading = uploadingProductId === product.id;
+                    // Check if using Whop's image vs custom override
+                    // Custom override: either from local state (just uploaded) or from API (previously saved)
+                    const hasCustomOverride = !!productImages[product.id] || !!product.customImageUrl;
+                    // Using Whop image: has Whop image AND no custom override
+                    const isUsingWhopImage = !!product.whopImageUrl && !hasCustomOverride;
 
                     return (
                     <tr
                       key={product.id}
-                      className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
+                      className="border-b border-gray-200 dark:border-gray-200 dark:border-zinc-800 hover:bg-gray-100/50 dark:hover:bg-zinc-800/50 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {/* Product Image with Upload/Edit */}
                           <div className="relative group">
                             {isUploading ? (
-                              <div className="h-9 w-16 bg-zinc-700 rounded-lg flex items-center justify-center">
-                                <div className="h-5 w-5 border-2 border-zinc-500 border-t-green-500 rounded-full animate-spin"></div>
+                              <div className="h-9 w-16 bg-gray-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
+                                <div className="h-5 w-5 border-2 border-gray-400 dark:border-zinc-500 border-t-green-500 rounded-full animate-spin"></div>
                               </div>
-                            ) : imageUrl ? (
+                            ) : displayImageUrl ? (
                               <>
                                 <img
-                                  src={imageUrl}
+                                  src={displayImageUrl}
                                   alt={product.title}
                                   className="h-9 w-16 rounded-lg object-cover"
                                 />
-                                {/* Edit overlay */}
+                                {/* Image source indicator */}
+                                {isUsingWhopImage && (
+                                  <div className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 rounded-full flex items-center justify-center" title="Image from Whop">
+                                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                )}
+                                {/* Edit overlay - only show for custom override option */}
                                 <button
                                   onClick={() => handleImageUploadClick(product.id)}
                                   className="absolute inset-0 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-                                  title="Change image"
+                                  title={hasCustomOverride ? "Change custom image" : "Override with custom image"}
                                 >
                                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1797,7 +1852,7 @@ export default function DashboardPage() {
                               <button
                                 onClick={() => handleImageUploadClick(product.id)}
                                 className="h-9 w-16 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center hover:bg-orange-500/30 transition-colors cursor-pointer group/upload"
-                                title="Upload image"
+                                title="Upload image (product has no image on Whop)"
                               >
                                 <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1806,12 +1861,18 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div>
-                            <p className="product-title text-white font-medium">{product.title}</p>
+                            <p className="product-title text-gray-900 dark:text-white font-medium">{product.title}</p>
                             {product.headline && (
-                              <p className="product-desc text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
+                              <p className="product-desc text-gray-500 dark:text-zinc-500 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
                             )}
-                            {!imageUrl && (
-                              <p className="text-orange-400 text-xs mt-0.5">Upload image</p>
+                            {!displayImageUrl && (
+                              <p className="text-orange-400 text-xs mt-0.5">No image - add on Whop or upload here</p>
+                            )}
+                            {isUsingWhopImage && (
+                              <p className="text-blue-400 text-xs mt-0.5">Using Whop image</p>
+                            )}
+                            {hasCustomOverride && displayImageUrl && (
+                              <p className="text-purple-400 text-xs mt-0.5">Custom override</p>
                             )}
                           </div>
                         </div>
@@ -1819,7 +1880,7 @@ export default function DashboardPage() {
                       <td className="px-6 py-4">
                         <p className="text-green-500 font-medium">{formatPrice(product.price, product.currency)}</p>
                         {product.planType === "renewal" && product.billingPeriod && (
-                          <p className="text-zinc-500 text-xs">/{product.billingPeriod === 30 ? 'month' : product.billingPeriod === 365 ? 'year' : `${product.billingPeriod} days`}</p>
+                          <p className="text-gray-400 dark:text-zinc-500 text-xs">/{product.billingPeriod === 30 ? 'month' : product.billingPeriod === 365 ? 'year' : `${product.billingPeriod} days`}</p>
                         )}
                       </td>
                       <td className=" px-6 py-4">
@@ -1827,7 +1888,7 @@ export default function DashboardPage() {
                           product.planType === "renewal"
                             ? "bg-purple-500/20 text-purple-400"
                             : product.planType === "free"
-                            ? "bg-zinc-500/20 text-zinc-400"
+                            ? "bg-zinc-500/20 text-gray-500 dark:text-zinc-400"
                             : "bg-blue-500/20 text-blue-400"
                         }`}>
                           {product.planType === "renewal" ? "Recurring" : product.planType === "free" ? "Free" : "One Time"}
@@ -1843,7 +1904,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-center">
                           <button
                             onClick={() => handleHideProduct(product.id)}
-                            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-orange-400 transition-colors cursor-pointer text-sm"
+                            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-500 dark:text-zinc-400 hover:text-orange-400 transition-colors cursor-pointer text-sm"
                             title="Hide from store"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1858,46 +1919,46 @@ export default function DashboardPage() {
                   })}
                   {/* Hidden Products */}
                   {hiddenProducts.map((product) => {
-                    const imageUrl = productImages[product.id] || product.imageUrl;
+                    const displayImageUrl = productImages[product.id] || product.imageUrl;
 
                     return (
                     <tr
                       key={product.id}
-                      className="border-b border-zinc-800 bg-zinc-900/30 opacity-60 hover:opacity-100 transition-opacity"
+                      className="border-b border-gray-200 dark:border-zinc-800 bg-gray-100/30 dark:bg-zinc-900/30 opacity-60 hover:opacity-100 transition-opacity"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          {imageUrl ? (
+                          {displayImageUrl ? (
                             <img
-                              src={imageUrl}
+                              src={displayImageUrl}
                               alt={product.title}
                               className="h-9 w-16 rounded-lg object-cover grayscale"
                             />
                           ) : (
-                            <div className="h-9 w-16 bg-zinc-700 rounded-lg flex items-center justify-center">
-                              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="h-9 w-16 bg-gray-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
+                              <svg className="w-5 h-5 text-gray-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                               </svg>
                             </div>
                           )}
                           <div>
-                            <p className="product-title text-zinc-400 font-medium">{product.title}</p>
+                            <p className="product-title text-gray-500 dark:text-zinc-400 font-medium">{product.title}</p>
                             {product.headline && (
-                              <p className="product-desc text-zinc-600 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
+                              <p className="product-desc text-gray-400 dark:text-zinc-600 text-xs mt-0.5 truncate max-w-[250px]">{product.headline}</p>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-zinc-500 font-medium">{formatPrice(product.price, product.currency)}</p>
+                        <p className="text-gray-400 dark:text-zinc-500 font-medium">{formatPrice(product.price, product.currency)}</p>
                       </td>
                       <td className=" px-6 py-4">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-zinc-700/50 text-zinc-500">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-zinc-700/50 text-gray-400 dark:text-zinc-500">
                           {product.planType === "renewal" ? "Recurring" : product.planType === "free" ? "Free" : "One Time"}
                         </span>
                       </td>
                       <td className=" px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-zinc-700/50 text-zinc-500">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-zinc-700/50 text-gray-400 dark:text-zinc-500">
                           <span className="h-1.5 w-1.5 bg-zinc-500 rounded-full"></span>
                           Hidden
                         </span>
@@ -1906,7 +1967,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-center">
                           <button
                             onClick={() => handleUnhideProduct(product.id)}
-                            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-green-400 transition-colors cursor-pointer text-sm"
+                            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-green-400 transition-colors cursor-pointer text-sm"
                             title="Show in store"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

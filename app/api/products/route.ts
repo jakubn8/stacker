@@ -11,7 +11,9 @@ export interface WhopProduct {
   description: string | null;
   headline: string | null;
   route: string;
-  imageUrl: string | null;
+  imageUrl: string | null; // The resolved image URL (Whop first, then custom)
+  whopImageUrl: string | null; // Original image from Whop API
+  customImageUrl: string | null; // Custom override image uploaded by creator
   // Pricing from the first/primary plan
   price: number;
   currency: string;
@@ -26,12 +28,46 @@ export interface WhopProduct {
 /**
  * GET /api/products?companyId=biz_xxx
  * Fetches products for a company from Whop API
+ *
+ * Parameters:
+ * - companyId: Required. The Whop company ID (biz_xxx)
+ * - experienceId: Optional. If provided, fetches the experience and uses its "App access"
+ *   products as the allowed list. This is the recommended approach.
+ * - allowedProductIds: Optional. Comma-separated list of product IDs to filter by.
+ *   If provided, only these products will be returned (from "App access" settings).
+ *   Use this if you already have the allowed IDs from a previous experience fetch.
+ * - filterHidden: Optional. If "true", also filters out products hidden by the owner in Stacker.
+ *
+ * Priority: experienceId > allowedProductIds > fallback to filtered list
+ *
  * Also checks user ownership via memberships
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");
+    const experienceId = searchParams.get("experienceId");
+    const allowedProductIdsParam = searchParams.get("allowedProductIds");
+
+    // Parse allowed product IDs (comma-separated)
+    let allowedProductIds: string[] | null = allowedProductIdsParam
+      ? allowedProductIdsParam.split(",").map(id => id.trim()).filter(Boolean)
+      : null;
+
+    // If experienceId is provided, fetch the experience to get allowed products
+    if (experienceId && !allowedProductIds) {
+      try {
+        const experience = await whopsdk.experiences.retrieve(experienceId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const experienceAny = experience as any;
+        const allowedProducts = experienceAny.products || [];
+        allowedProductIds = allowedProducts.map((p: { id: string }) => p.id);
+        console.log(`Fetched ${allowedProductIds.length} allowed products from experience ${experienceId}`);
+      } catch (expError) {
+        console.error("Failed to fetch experience for product filtering:", expError);
+        // Continue without filtering - will fall back to filtered list
+      }
+    }
 
     // Try to verify authentication
     const authResult = await verifyAuthFromRequest(request);
@@ -55,7 +91,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    console.log(`Fetching products for company: ${companyId}, user: ${userId || "anonymous"}`);
+    console.log(`Fetching products for company: ${companyId}, user: ${userId || "anonymous"}, allowedIds: ${allowedProductIds?.length || "all"}`);
 
     // Check if we should filter hidden products (for customer-facing store)
     const filterHidden = searchParams.get("filterHidden") === "true";
@@ -99,22 +135,35 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const products: WhopProduct[] = [];
 
     try {
-      // First, get list of product IDs (list endpoint doesn't include images)
-      const productIds: string[] = [];
-      for await (const product of whopsdk.products.list({
-        company_id: companyId,
-      })) {
-        // Skip the Stacker app product itself
-        if (product.title.toLowerCase() === "stacker") {
-          continue;
-        }
+      let productIds: string[] = [];
 
-        // Skip hidden products (for customer-facing store)
-        if (filterHidden && hiddenProductIds.includes(product.id)) {
-          continue;
-        }
+      // If allowedProductIds is provided, use those directly (from "App access" settings)
+      // This is more efficient as we skip the list call entirely
+      if (allowedProductIds && allowedProductIds.length > 0) {
+        console.log(`Using allowed product IDs from App access: ${allowedProductIds.length} products`);
+        productIds = allowedProductIds.filter(id => {
+          // Skip hidden products (for customer-facing store)
+          if (filterHidden && hiddenProductIds.includes(id)) {
+            return false;
+          }
+          return true;
+        });
+      } else {
+        // Fallback: List all products with proper filters
+        // This should rarely be used - allowedProductIds should always be provided
+        console.log("Warning: No allowedProductIds provided, listing all products with filters");
+        for await (const product of whopsdk.products.list({
+          company_id: companyId,
+          visibilities: ["visible"], // Only visible products (not archived/hidden)
+          product_types: ["regular"], // Only regular products (not apps)
+        })) {
+          // Skip hidden products (for customer-facing store)
+          if (filterHidden && hiddenProductIds.includes(product.id)) {
+            continue;
+          }
 
-        productIds.push(product.id);
+          productIds.push(product.id);
+        }
       }
 
       // Fetch full product details (including images) in parallel
@@ -178,13 +227,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const productAny = product as any;
+
+        // Image priority:
+        // 1. Custom override (if explicitly set by creator) - takes highest priority
+        // 2. Whop API images (pulled automatically from Whop)
+        // 3. null if neither exists
+        // This allows creators to override Whop images when needed
+        const whopImageUrl = productAny.images?.[0]?.source_url || null;
+        const customImageUrl = productImages[product.id] || null;
+
+        // If creator has set a custom image, use it (override)
+        // Otherwise, use Whop's image (default behavior)
+        const imageUrl = customImageUrl || whopImageUrl;
+
         products.push({
           id: product.id,
           title: product.title,
           description: product.headline || null,
           headline: product.headline,
           route: product.route,
-          imageUrl: productImages[product.id] || productAny.images?.[0]?.source_url || null,
+          imageUrl,
+          whopImageUrl,
+          customImageUrl,
           price,
           currency,
           planType,

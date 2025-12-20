@@ -35,13 +35,12 @@ export default function DashboardHome() {
       bgColor: "bg-green-500/10",
     },
     {
-      title: "Store Preview",
-      description: "See how your products look to users",
+      title: "Storefront Editor",
+      description: "Customize your storefront appearance",
       href: `/dashboard/${companyId}/preview`,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
         </svg>
       ),
       iconColor: "text-blue-400",
@@ -95,7 +94,7 @@ export default function DashboardHome() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950">
       <style jsx>{`
         @media (max-width: 640px) {
           .how-it-works-grid {
@@ -143,10 +142,10 @@ export default function DashboardHome() {
             </span>
             <span className="text-green-400 text-sm font-medium">Add 20% to your monthly recurring revenue</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
             Stacker
           </h1>
-          <p className="text-zinc-400 text-lg max-w-xl mx-auto">
+          <p className="text-gray-500 dark:text-zinc-400 text-lg max-w-xl mx-auto">
             Post-purchase upsells for Whop
           </p>
         </div>
@@ -154,8 +153,8 @@ export default function DashboardHome() {
         {/* How It Works Section */}
         <div className="relative mb-10">
           <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-purple-500/10 to-orange-500/10 rounded-2xl blur-xl"></div>
-          <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
-            <h2 className="text-center text-zinc-400 text-sm font-medium uppercase tracking-wider mb-8">
+          <div className="relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-gray-200 dark:border-zinc-800 rounded-2xl p-8">
+            <h2 className="text-center text-gray-500 dark:text-zinc-400 text-sm font-medium uppercase tracking-wider mb-8">
               How it works
             </h2>
 
@@ -171,7 +170,7 @@ export default function DashboardHome() {
                       </span>
                     </div>
                     {/* Icon */}
-                    <div className="how-it-works-icon-container h-16 w-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4 mt-2">
+                    <div className="how-it-works-icon-container h-16 w-16 rounded-2xl bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 flex items-center justify-center mb-4 mt-2">
                       <span className="text-green-400">{step.icon}</span>
                     </div>
                   </div>
@@ -179,12 +178,12 @@ export default function DashboardHome() {
                   {/* Text container */}
                   <div>
                     {/* Title */}
-                    <h3 className="how-it-works-title text-white font-semibold text-base mb-2">
+                    <h3 className="how-it-works-title text-gray-900 dark:text-white font-semibold text-base mb-2">
                       {step.title}
                     </h3>
 
                     {/* Description */}
-                    <p className="text-zinc-500 text-sm">
+                    <p className="text-gray-500 dark:text-zinc-500 text-sm">
                       {step.description}
                     </p>
                   </div>
@@ -192,7 +191,7 @@ export default function DashboardHome() {
                   {/* Arrow connector */}
                   {index < steps.length - 1 && (
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 hidden md:block">
-                      <svg className="w-6 h-6 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-gray-400 dark:text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
@@ -209,22 +208,22 @@ export default function DashboardHome() {
             <Link
               key={view.href}
               href={view.href}
-              className="group flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-all hover:bg-zinc-900/80"
+              className="group flex items-center gap-4 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl p-4 hover:border-gray-300 dark:hover:border-zinc-700 transition-all hover:bg-gray-50 dark:hover:bg-zinc-900/80"
             >
               <div className={`flex-shrink-0 h-12 w-12 rounded-xl ${view.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                 <span className={view.iconColor}>{view.icon}</span>
               </div>
 
               <div className="flex-1 min-w-0">
-                <h2 className="text-white font-semibold group-hover:text-green-400 transition-colors">
+                <h2 className="text-gray-900 dark:text-white font-semibold group-hover:text-green-400 transition-colors">
                   {view.title}
                 </h2>
-                <p className="text-zinc-500 text-sm">
+                <p className="text-gray-500 dark:text-zinc-500 text-sm">
                   {view.description}
                 </p>
               </div>
 
-              <div className="flex-shrink-0 text-zinc-600 group-hover:text-green-400 transition-colors">
+              <div className="flex-shrink-0 text-gray-400 dark:text-zinc-600 group-hover:text-green-400 transition-colors">
                 <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

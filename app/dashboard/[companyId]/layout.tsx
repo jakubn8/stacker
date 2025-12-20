@@ -14,8 +14,8 @@ import { whopsdk } from "@/lib/whop-sdk";
 // Access denied component
 function AccessDenied() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 max-w-md text-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center p-6">
+      <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl p-8 max-w-md text-center">
         <div className="h-16 w-16 bg-orange-500/10 rounded-full mx-auto flex items-center justify-center mb-4">
           <svg
             className="w-8 h-8 text-orange-400"
@@ -31,8 +31,8 @@ function AccessDenied() {
             />
           </svg>
         </div>
-        <h1 className="text-xl font-semibold text-white mb-2">Admin Access Required</h1>
-        <p className="text-zinc-400 text-sm mb-4">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Admin Access Required</h1>
+        <p className="text-gray-600 dark:text-zinc-400 text-sm mb-4">
           Only company admins can access the Stacker dashboard.
           You need to be a team member of this company.
         </p>

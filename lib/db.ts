@@ -67,6 +67,29 @@ export interface UserFlows {
 
 export type FlowId = "flow1" | "flow2" | "flow3";
 
+// Storefront customization settings
+export interface StorefrontSettings {
+  // Header
+  title: string;
+  subtitle: string;
+  // Styling
+  accentColor: string; // Hex color for buttons
+  buttonText: string; // CTA text like "Buy", "Get Access", etc.
+  // Layout
+  columns: 1 | 2 | 3; // Grid columns on desktop
+  // Empty state
+  emptyMessage: string;
+}
+
+export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
+  title: "Available Products",
+  subtitle: "Browse and purchase additional products",
+  accentColor: "#FA4616",
+  buttonText: "Buy",
+  columns: 2,
+  emptyMessage: "No products available",
+};
+
 export interface AnalyticsData {
   totalViews: number;
   totalConversions: number;
@@ -114,6 +137,8 @@ export interface User {
   productOverrides: Record<string, ProductOverride>;
   // Whop experience ID for this company's Stacker app instance (for notifications)
   experienceId?: string;
+  // Storefront customization
+  storefrontSettings?: StorefrontSettings;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -970,6 +995,52 @@ export async function getProductImages(userId: string): Promise<Record<string, s
   const user = await getUser(userId);
   if (!user) return {};
   return user.productImages || {};
+}
+
+// ============================================
+// STOREFRONT SETTINGS FUNCTIONS
+// ============================================
+
+/**
+ * Get storefront settings for a user
+ * Returns default settings if none are saved
+ */
+export async function getStorefrontSettings(userId: string): Promise<StorefrontSettings> {
+  const user = await getUser(userId);
+  if (!user) return DEFAULT_STOREFRONT_SETTINGS;
+  return user.storefrontSettings || DEFAULT_STOREFRONT_SETTINGS;
+}
+
+/**
+ * Get storefront settings by company ID
+ * Used by the public storefront page
+ */
+export async function getStorefrontSettingsByCompanyId(companyId: string): Promise<StorefrontSettings> {
+  const user = await getUserByWhopCompanyId(companyId);
+  if (!user) return DEFAULT_STOREFRONT_SETTINGS;
+  return user.storefrontSettings || DEFAULT_STOREFRONT_SETTINGS;
+}
+
+/**
+ * Update storefront settings for a user
+ */
+export async function updateStorefrontSettings(
+  userId: string,
+  settings: Partial<StorefrontSettings>
+): Promise<void> {
+  const user = await getUser(userId);
+  if (!user) throw new Error("User not found");
+
+  const currentSettings = user.storefrontSettings || DEFAULT_STOREFRONT_SETTINGS;
+  const updatedSettings = {
+    ...currentSettings,
+    ...settings,
+  };
+
+  await db.collection("users").doc(userId).update({
+    storefrontSettings: updatedSettings,
+    updatedAt: Timestamp.now(),
+  });
 }
 
 export async function updateProductOverride(

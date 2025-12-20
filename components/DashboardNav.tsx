@@ -68,7 +68,7 @@ export default function DashboardNav({ companyId }: DashboardNavProps) {
   };
 
   return (
-    <nav className="bg-zinc-900 border-b border-zinc-800 relative">
+    <nav className="bg-gray-100 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 relative">
       <div className="flex items-center justify-center h-14">
         {/* Centered Nav Items */}
         <div className="flex items-center gap-1 max-sm:gap-0">
@@ -79,8 +79,8 @@ export default function DashboardNav({ companyId }: DashboardNavProps) {
               onClick={(e) => handleEditorClick(e, item)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors max-sm:px-2 max-sm:py-1.5 max-sm:gap-1.5 max-sm:text-xs ${
                 isActive(item.href)
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                  ? "bg-gray-200 dark:bg-zinc-800 text-gray-900 dark:text-white"
+                  : "text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-zinc-800/50"
               }`}
             >
               {item.icon}
@@ -92,9 +92,9 @@ export default function DashboardNav({ companyId }: DashboardNavProps) {
 
       {/* Mobile Editor Message */}
       {showEditorMessage && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 shadow-xl max-w-[280px] text-center">
-          <p className="text-white text-sm font-medium mb-1">Desktop Required</p>
-          <p className="text-zinc-400 text-xs">The editor is only available on desktop devices.</p>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg px-4 py-3 shadow-xl max-w-[280px] text-center">
+          <p className="text-gray-900 dark:text-white text-sm font-medium mb-1">Desktop Required</p>
+          <p className="text-gray-600 dark:text-zinc-400 text-xs">The editor is only available on desktop devices.</p>
         </div>
       )}
     </nav>

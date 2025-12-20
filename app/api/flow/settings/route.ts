@@ -111,6 +111,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       notificationSettings: user.notificationSettings,
       hiddenProductIds: user.hiddenProductIds || [],
       productImages: user.productImages || {},
+      // Experience ID for fetching allowed products (from "App access" settings)
+      experienceId: user.experienceId || null,
     });
   } catch (error) {
     console.error("Get flow settings error:", error);

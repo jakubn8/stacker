@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { whopsdk } from "@/lib/whop-sdk";
-import { saveExperienceIdForCompany } from "@/lib/db";
+import { saveExperienceIdForCompany, getStorefrontSettingsByCompanyId, DEFAULT_STOREFRONT_SETTINGS } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -83,12 +83,26 @@ export async function GET(
         console.error("Failed to save experienceId:", err);
       });
 
+      // Extract allowed products from the experience (products selected in "App access")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const experienceAny = experience as any;
+      const allowedProducts = experienceAny.products || [];
+      const allowedProductIds = allowedProducts.map((p: { id: string }) => p.id);
+
+      // Get storefront settings for this company
+      const storefrontSettings = await getStorefrontSettingsByCompanyId(companyId);
+
       return NextResponse.json({
         success: true,
         experienceId,
         companyId,
         companyName: experience.company?.title || null,
         accessLevel: accessResult.access_level, // "customer" or "admin"
+        // Products this app has access to (from "App access" settings in Whop)
+        allowedProducts,
+        allowedProductIds,
+        // Storefront customization settings
+        storefrontSettings,
       });
     } catch (expError) {
       console.error("Experience lookup failed:", expError);

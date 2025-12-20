@@ -158,8 +158,8 @@ function OfferPageContent() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="h-10 w-10 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="h-10 w-10 border-2 border-gray-300 dark:border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -167,10 +167,10 @@ function OfferPageContent() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center p-4">
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 max-w-md text-center">
           <h2 className="text-xl font-semibold text-red-400 mb-2">Something went wrong</h2>
-          <p className="text-zinc-400">{error}</p>
+          <p className="text-gray-500 dark:text-zinc-400">{error}</p>
         </div>
       </div>
     );
@@ -178,8 +178,8 @@ function OfferPageContent() {
 
   if (!activeOffer) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <div className="text-zinc-400">No offer available</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center p-4">
+        <div className="text-gray-500 dark:text-zinc-400">No offer available</div>
       </div>
     );
   }
@@ -189,9 +189,9 @@ function OfferPageContent() {
       {/* Responsive Offer Card */}
       {isUpsell ? (
         /* UPSELL CARD - Green theme */
-        <div className="w-full max-w-[360px] sm:max-w-[400px] bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="w-full max-w-[360px] sm:max-w-[400px] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header Badge */}
-          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-b border-zinc-800 px-4 py-2.5 sm:px-5 sm:py-3">
+          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-b border-gray-200 dark:border-zinc-800 px-4 py-2.5 sm:px-5 sm:py-3">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -204,26 +204,26 @@ function OfferPageContent() {
           <div className="p-4 sm:p-5 md:p-6">
             {/* Header */}
             <div className="text-center mb-4">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white leading-tight">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                 {activeOffer.settings.headline}
               </h1>
-              <p className="text-zinc-400 mt-1.5 text-xs sm:text-sm">
+              <p className="text-gray-500 dark:text-zinc-400 mt-1.5 text-xs sm:text-sm">
                 {activeOffer.settings.subheadline}
               </p>
             </div>
 
             {/* Product Display */}
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 sm:p-4 mb-4">
+            <div className="bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl p-3 sm:p-4 mb-4">
               <div className="space-y-2">
                 {/* Product Image */}
                 {activeOffer.product.imageUrl ? (
                   <img
                     src={activeOffer.product.imageUrl}
                     alt={activeOffer.product.name}
-                    className="w-full aspect-video rounded-xl object-cover border border-zinc-700"
+                    className="w-full aspect-video rounded-xl object-cover border border-gray-300 dark:border-zinc-700"
                   />
                 ) : (
-                  <div className="w-full aspect-video bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-zinc-700">
+                  <div className="w-full aspect-video bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-gray-300 dark:border-zinc-700">
                     <svg className="w-10 h-10 sm:w-12 sm:h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
@@ -231,16 +231,16 @@ function OfferPageContent() {
                 )}
                 {/* Product Info */}
                 <div className="pt-1">
-                  <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
+                  <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{activeOffer.product.name}</h2>
                   {activeOffer.settings.productDescription && (
-                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
+                    <p className="text-gray-500 dark:text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
                   )}
                 </div>
                 {/* Price and Billing */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
-                      <span className="text-sm sm:text-base text-zinc-500 line-through">
+                      <span className="text-sm sm:text-base text-gray-400 dark:text-zinc-500 line-through">
                         {formatPrice(activeOffer.settings.discountPrice)}
                       </span>
                     )}
@@ -281,7 +281,7 @@ function OfferPageContent() {
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <p className="text-zinc-300 text-xs sm:text-sm">{bullet}</p>
+                    <p className="text-gray-600 dark:text-zinc-300 text-xs sm:text-sm">{bullet}</p>
                   </div>
                 ))}
               </div>
@@ -289,23 +289,23 @@ function OfferPageContent() {
 
             {/* Social Proof */}
             {activeOffer.settings.showSocialProof && (
-              <div className="bg-zinc-800/30 border border-zinc-800 rounded-xl p-3 sm:p-4 mb-4">
+              <div className="bg-gray-100/30 dark:bg-gray-100 dark:bg-zinc-800/30 border border-gray-200 dark:border-zinc-800 rounded-xl p-3 sm:p-4 mb-4">
                 <div className="flex items-start gap-2.5 sm:gap-3">
                   <div className="h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-semibold text-xs sm:text-sm">
+                    <span className="text-gray-900 dark:text-white font-semibold text-xs sm:text-sm">
                       {activeOffer.settings.reviewAuthor ? activeOffer.settings.reviewAuthor.charAt(0).toUpperCase() : "U"}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-0.5 text-yellow-400 text-xs sm:text-sm">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={i < activeOffer.settings.reviewStars ? "text-yellow-400" : "text-zinc-600"}>★</span>
+                        <span key={i} className={i < activeOffer.settings.reviewStars ? "text-yellow-400" : "text-gray-400 dark:text-zinc-600"}>★</span>
                       ))}
                     </div>
-                    <p className="text-zinc-300 text-xs sm:text-sm mt-1 italic leading-relaxed">
+                    <p className="text-gray-600 dark:text-zinc-300 text-xs sm:text-sm mt-1 italic leading-relaxed">
                       &ldquo;{activeOffer.settings.reviewText}&rdquo;
                     </p>
-                    <p className="text-zinc-500 text-[10px] sm:text-xs mt-1">{activeOffer.settings.reviewAuthor}</p>
+                    <p className="text-gray-400 dark:text-zinc-500 text-[10px] sm:text-xs mt-1">{activeOffer.settings.reviewAuthor}</p>
                   </div>
                 </div>
               </div>
@@ -316,7 +316,7 @@ function OfferPageContent() {
               <button
                 onClick={handleAccept}
                 disabled={processing}
-                className="w-full bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white font-semibold py-3 sm:py-4 px-4 rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed"
+                className="w-full bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-gray-900 dark:text-white font-semibold py-3 sm:py-4 px-4 rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 <span className="flex flex-col items-center">
                   {processing ? (
@@ -339,7 +339,7 @@ function OfferPageContent() {
                 <button
                   onClick={handleDecline}
                   disabled={processing}
-                  className="text-zinc-500 hover:text-zinc-400 text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-gray-500 dark:text-zinc-400 text-xs sm:text-sm cursor-pointer disabled:opacity-50"
                 >
                   No thanks, I&apos;ll skip this offer
                 </button>
@@ -349,7 +349,7 @@ function OfferPageContent() {
         </div>
       ) : (
         /* DOWNSELL CARD - Orange theme */
-        <div className="w-full max-w-[360px] sm:max-w-[400px] bg-zinc-900/90 backdrop-blur-xl border border-orange-500/30 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="w-full max-w-[360px] sm:max-w-[400px] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-orange-500/30 rounded-2xl shadow-2xl overflow-hidden">
           {/* Urgent Header */}
           <div className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 px-4 py-2.5 sm:px-5 sm:py-3 text-center">
             <p className="text-orange-400 text-xs sm:text-sm font-semibold uppercase tracking-wider">Last Chance Offer</p>
@@ -358,16 +358,16 @@ function OfferPageContent() {
           <div className="p-4 sm:p-5 md:p-6">
             {/* Headline */}
             <div className="text-center mb-4">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white leading-tight">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                 {activeOffer.settings.headline}
               </h1>
-              <p className="text-zinc-500 mt-1.5 text-xs sm:text-sm">
+              <p className="text-gray-400 dark:text-zinc-500 mt-1.5 text-xs sm:text-sm">
                 {activeOffer.settings.subheadline}
               </p>
             </div>
 
             {/* Product Display */}
-            <div className="bg-zinc-800/50 border border-orange-500/20 rounded-xl p-3 sm:p-4 mb-4">
+            <div className="bg-gray-100/50 dark:bg-gray-100 dark:bg-zinc-800/50 border border-orange-500/20 rounded-xl p-3 sm:p-4 mb-4">
               <div className="space-y-2">
                 {/* Product Image */}
                 {activeOffer.product.imageUrl ? (
@@ -385,15 +385,15 @@ function OfferPageContent() {
                 )}
                 {/* Product Info */}
                 <div className="pt-1">
-                  <h2 className="text-sm sm:text-base font-semibold text-white">{activeOffer.product.name}</h2>
+                  <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{activeOffer.product.name}</h2>
                   {activeOffer.settings.productDescription && (
-                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
+                    <p className="text-gray-500 dark:text-zinc-400 text-xs sm:text-sm mt-0.5 line-clamp-3">{activeOffer.settings.productDescription}</p>
                   )}
                 </div>
                 {/* Price */}
                 <div className="flex items-center gap-2">
                   {activeOffer.settings.showDiscountPrice && activeOffer.settings.discountPrice && activeOffer.settings.discountPrice > 0 && (
-                    <span className="text-base sm:text-lg text-zinc-500 line-through">
+                    <span className="text-base sm:text-lg text-gray-400 dark:text-zinc-500 line-through">
                       {formatPrice(activeOffer.settings.discountPrice)}
                     </span>
                   )}
@@ -408,11 +408,11 @@ function OfferPageContent() {
             {activeOffer.settings.bulletPoints.length > 0 && (
               <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center mb-4">
                 {activeOffer.settings.bulletPoints.map((bullet, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5">
+                  <span key={index} className="inline-flex items-center gap-1 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5">
                     <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-zinc-300 text-[10px] sm:text-xs">{bullet}</span>
+                    <span className="text-gray-600 dark:text-zinc-300 text-[10px] sm:text-xs">{bullet}</span>
                   </span>
                 ))}
               </div>
@@ -420,13 +420,13 @@ function OfferPageContent() {
 
             {/* Social Proof - Minimal inline style */}
             {activeOffer.settings.showSocialProof && (
-              <div className="text-center mb-4 py-3 border-t border-b border-zinc-800">
+              <div className="text-center mb-4 py-3 border-t border-b border-gray-200 dark:border-zinc-800">
                 <div className="flex items-center justify-center gap-0.5 text-yellow-400 text-sm sm:text-base mb-1">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className={i < activeOffer.settings.reviewStars ? "text-yellow-400" : "text-zinc-600"}>★</span>
+                    <span key={i} className={i < activeOffer.settings.reviewStars ? "text-yellow-400" : "text-gray-400 dark:text-zinc-600"}>★</span>
                   ))}
                 </div>
-                <p className="text-zinc-400 text-xs sm:text-sm italic">
+                <p className="text-gray-500 dark:text-zinc-400 text-xs sm:text-sm italic">
                   &ldquo;{activeOffer.settings.reviewText}&rdquo; - {activeOffer.settings.reviewAuthor}
                 </p>
               </div>
@@ -436,7 +436,7 @@ function OfferPageContent() {
             <button
               onClick={handleAccept}
               disabled={processing}
-              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50 text-white font-bold py-3 sm:py-4 px-4 rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-orange-500/20"
+              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50 text-gray-900 dark:text-white font-bold py-3 sm:py-4 px-4 rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-orange-500/20"
             >
               <span className="flex flex-col items-center">
                 {processing ? (
@@ -461,7 +461,7 @@ function OfferPageContent() {
               <button
                 onClick={handleDecline}
                 disabled={processing}
-                className="text-zinc-600 hover:text-zinc-500 text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                className="text-gray-400 dark:text-zinc-600 hover:text-gray-400 dark:text-zinc-500 text-xs sm:text-sm cursor-pointer disabled:opacity-50"
               >
                 No thanks, continue without this
               </button>
@@ -477,8 +477,8 @@ export default function OfferPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-          <div className="h-10 w-10 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
+        <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center">
+          <div className="h-10 w-10 border-2 border-gray-300 dark:border-zinc-700 border-t-green-500 rounded-full animate-spin"></div>
         </div>
       }
     >
