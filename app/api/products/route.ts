@@ -61,8 +61,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const experienceAny = experience as any;
         const allowedProducts = experienceAny.products || [];
-        allowedProductIds = allowedProducts.map((p: { id: string }) => p.id);
-        console.log(`Fetched ${allowedProductIds.length} allowed products from experience ${experienceId}`);
+        const fetchedIds = allowedProducts.map((p: { id: string }) => p.id);
+        allowedProductIds = fetchedIds;
+        console.log(`Fetched ${fetchedIds.length} allowed products from experience ${experienceId}`);
       } catch (expError) {
         console.error("Failed to fetch experience for product filtering:", expError);
         // Continue without filtering - will fall back to filtered list
