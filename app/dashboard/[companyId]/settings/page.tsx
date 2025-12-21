@@ -979,7 +979,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Billing Section */}
-        <div className={`bg-zinc-900 border rounded-xl overflow-hidden ${
+        <div className={`bg-white dark:bg-zinc-900 border rounded-xl overflow-hidden ${
           billingStatus?.billing?.status === "unpaid_lockout"
             ? "border-red-500/50"
             : billingStatus?.billing?.status === "grace_period"
@@ -1408,7 +1408,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={flowId}
-                className={`bg-zinc-900 border rounded-xl overflow-hidden transition-colors ${
+                className={`bg-white dark:bg-zinc-900 border rounded-xl overflow-hidden transition-colors ${
                   flow.isActive ? "border-green-500/30" : "border-gray-200 dark:border-zinc-800"
                 }`}
               >
@@ -1769,7 +1769,7 @@ export default function DashboardPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="products-table w-full">
-                <thead className="bg-zinc-900/50">
+                <thead className="bg-gray-100 dark:bg-zinc-900/50">
                   <tr className="border-b border-gray-200 dark:border-gray-200 dark:border-zinc-800">
                     <th className="text-left text-sm font-medium text-gray-500 dark:text-zinc-400 px-6 py-4">
                       Product

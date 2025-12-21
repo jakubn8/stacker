@@ -332,17 +332,17 @@ export default function EditorPage() {
   // Show loading state while fetching settings
   if (isLoading) {
     return (
-      <div className="h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="h-10 w-10 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-zinc-400 text-sm">Loading editor settings...</p>
+          <div className="h-10 w-10 border-2 border-gray-300 dark:border-zinc-700 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 dark:text-zinc-400 text-sm">Loading editor settings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-zinc-950 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gray-50 dark:bg-zinc-950 flex flex-col overflow-hidden">
       <DashboardNav companyId={companyId} />
 
       <div className="flex-1 flex overflow-hidden">
@@ -889,12 +889,12 @@ export default function EditorPage() {
       </button>
 
       {/* Right Side - Control Panel (30% on desktop, full on mobile when editing) */}
-      <div className={`w-[30%] bg-zinc-900 border-l border-zinc-800 flex flex-col max-sm:w-full ${showMobilePanel ? '' : 'max-sm:hidden'}`}>
+      <div className={`w-[30%] bg-white dark:bg-zinc-900 border-l border-gray-200 dark:border-zinc-800 flex flex-col max-sm:w-full ${showMobilePanel ? '' : 'max-sm:hidden'}`}>
         {/* Header with Save Button */}
-        <div className="p-6 border-b border-zinc-800 max-sm:p-4">
+        <div className="p-6 border-b border-gray-200 dark:border-zinc-800 max-sm:p-4">
           <div className="flex items-center justify-between mb-4 max-sm:flex-col max-sm:items-stretch max-sm:gap-3 max-sm:mb-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-white max-sm:text-lg">Edit Offer</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white max-sm:text-lg">Edit Offer</h2>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                 activeProduct === "upsell"
                   ? "bg-green-500/20 text-green-400"
@@ -922,12 +922,12 @@ export default function EditorPage() {
           {/* Flow Selector */}
           {availableFlows.length > 1 && (
             <div className="mb-4">
-              <label className="text-sm font-medium text-zinc-300 block mb-2">Editing Flow</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-zinc-300 block mb-2">Editing Flow</label>
               <div className="relative">
                 <select
                   value={selectedFlow}
                   onChange={(e) => handleFlowChange(e.target.value as FlowId)}
-                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   {availableFlows.map((flowId) => (
                     <option key={flowId} value={flowId}>
@@ -936,18 +936,18 @@ export default function EditorPage() {
                   ))}
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-gray-400 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 mt-1.5">
+              <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1.5">
                 Configure upsell flows in your dashboard settings.
               </p>
             </div>
           )}
 
-          <p className="text-zinc-400 text-sm max-sm:text-xs">
+          <p className="text-gray-500 dark:text-zinc-400 text-sm max-sm:text-xs">
             Customize your {activeProduct} offer. Changes appear instantly in the preview.
           </p>
           {saveMessage && (
@@ -965,79 +965,79 @@ export default function EditorPage() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6 max-sm:p-4 max-sm:space-y-5 max-sm:pb-24">
           {/* Headline */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Headline</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Headline</label>
             <input
               type="text"
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
               placeholder="Enter headline..."
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
           {/* Sub-headline */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Sub-headline</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Sub-headline</label>
             <textarea
               value={subheadline}
               onChange={(e) => setSubheadline(e.target.value)}
               placeholder="Enter sub-headline..."
               rows={3}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
             />
           </div>
 
           {/* Button Text */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Button Text</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Button Text</label>
             <input
               type="text"
               value={buttonText}
               onChange={(e) => setButtonText(e.target.value)}
               placeholder="Enter button text..."
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-gray-500 dark:text-zinc-500">
               &quot;One-Click Charge&quot; subtext is always shown below the button.
             </p>
           </div>
 
           {/* Divider - Product Info */}
-          <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Product Info</h3>
+          <div className="border-t border-gray-200 dark:border-zinc-800 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Info</h3>
           </div>
 
           {/* Product Description */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Product Description</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Product Description</label>
             <textarea
               value={productDescription}
               onChange={(e) => setProductDescription(e.target.value)}
               placeholder="Enter a short description of the product..."
               rows={2}
               maxLength={80}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-gray-500 dark:text-zinc-500">
               Custom description shown on the offer card. Max 80 characters. ({productDescription.length}/80)
             </p>
           </div>
 
           {/* Divider - Pricing */}
-          <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Pricing Display</h3>
+          <div className="border-t border-gray-200 dark:border-zinc-800 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pricing Display</h3>
           </div>
 
           {/* Show Discount Price Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium text-zinc-300">Show Discount Price</label>
-              <p className="text-xs text-zinc-500 mt-0.5">Display a crossed-out &quot;was&quot; price</p>
+              <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Show Discount Price</label>
+              <p className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">Display a crossed-out &quot;was&quot; price</p>
             </div>
             <button
               onClick={() => setShowDiscountPrice(!showDiscountPrice)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                showDiscountPrice ? "bg-green-500" : "bg-zinc-600"
+                showDiscountPrice ? "bg-green-500" : "bg-gray-300 dark:bg-zinc-600"
               }`}
             >
               <span
@@ -1052,9 +1052,9 @@ export default function EditorPage() {
           {showDiscountPrice && (
             <div className="space-y-2 pl-0 border-l-2 border-green-500/30 ml-0 animate-in fade-in duration-200">
               <div className="pl-4 space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Original Price (crossed out)</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Original Price (crossed out)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-400">$</span>
                   <input
                     type="number"
                     step="0.01"
@@ -1062,10 +1062,10 @@ export default function EditorPage() {
                     value={discountPrice || ""}
                     onChange={(e) => setDiscountPrice(parseFloat(e.target.value) || 0)}
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full pl-8 pr-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-gray-500 dark:text-zinc-500">
                   This price will appear crossed out next to the actual price.
                 </p>
               </div>
@@ -1073,64 +1073,64 @@ export default function EditorPage() {
           )}
 
           {/* Divider - Bullet Points */}
-          <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Bullet Points</h3>
+          <div className="border-t border-gray-200 dark:border-zinc-800 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Bullet Points</h3>
           </div>
 
           {/* Bullet Point 1 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Bullet Point 1</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Bullet Point 1</label>
             <input
               type="text"
               value={bullet1}
               onChange={(e) => setBullet1(e.target.value)}
               placeholder="Enter benefit..."
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
           {/* Bullet Point 2 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Bullet Point 2</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Bullet Point 2</label>
             <input
               type="text"
               value={bullet2}
               onChange={(e) => setBullet2(e.target.value)}
               placeholder="Enter benefit..."
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
           {/* Bullet Point 3 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">Bullet Point 3</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Bullet Point 3</label>
             <input
               type="text"
               value={bullet3}
               onChange={(e) => setBullet3(e.target.value)}
               placeholder="Enter benefit..."
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-gray-500 dark:text-zinc-500">
               Leave empty to hide a bullet point.
             </p>
           </div>
 
           {/* Divider - Social Proof */}
-          <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Social Proof</h3>
+          <div className="border-t border-gray-200 dark:border-zinc-800 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Social Proof</h3>
           </div>
 
           {/* Social Proof Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium text-zinc-300">Show Review</label>
-              <p className="text-xs text-zinc-500 mt-0.5">Display a customer testimonial</p>
+              <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Show Review</label>
+              <p className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">Display a customer testimonial</p>
             </div>
             <button
               onClick={() => setShowSocialProof(!showSocialProof)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                showSocialProof ? "bg-green-500" : "bg-zinc-600"
+                showSocialProof ? "bg-green-500" : "bg-gray-300 dark:bg-zinc-600"
               }`}
             >
               <span
@@ -1147,7 +1147,7 @@ export default function EditorPage() {
               <div className="pl-4 space-y-4">
                 {/* Star Rating */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Star Rating</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Star Rating</label>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <button
@@ -1155,7 +1155,7 @@ export default function EditorPage() {
                         onClick={() => setStarRating(i + 1)}
                         className="text-2xl cursor-pointer transition-colors"
                       >
-                        <span className={i < starRating ? "text-yellow-400" : "text-zinc-600 hover:text-zinc-500"}>
+                        <span className={i < starRating ? "text-yellow-400" : "text-gray-300 dark:text-zinc-600 hover:text-gray-400 dark:hover:text-zinc-500"}>
                           ★
                         </span>
                       </button>
@@ -1165,25 +1165,25 @@ export default function EditorPage() {
 
                 {/* Review Text */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Review Text</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Review Text</label>
                   <textarea
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
                     placeholder="Enter customer review..."
                     rows={4}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                   />
                 </div>
 
                 {/* Author Name */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Author Name</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Author Name</label>
                   <input
                     type="text"
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}
                     placeholder="@username"
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1192,8 +1192,8 @@ export default function EditorPage() {
         </div>
 
         {/* Footer - hidden on mobile since toggle button is there */}
-        <div className="p-6 border-t border-zinc-800 max-sm:hidden">
-          <p className="text-xs text-zinc-500 text-center">
+        <div className="p-6 border-t border-gray-200 dark:border-zinc-800 max-sm:hidden">
+          <p className="text-xs text-gray-500 dark:text-zinc-500 text-center">
             Changes are saved when you click &quot;Save Changes&quot;
           </p>
         </div>
